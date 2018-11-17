@@ -32,7 +32,7 @@ end
 # unset irrelavent variables
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/home/user/Documents/Advanced ML/ex1/venv"
+set -gx VIRTUAL_ENV "/home/user/Documents/Advanced_ML/Ex/advanced_ml/ex1/venv"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH
