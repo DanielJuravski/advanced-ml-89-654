@@ -1,0 +1,6 @@
+**/.idea/
+**/*.iml
+**/.pyc
+ex1/venv/
+ex1/venv/*
+_MACOSX
