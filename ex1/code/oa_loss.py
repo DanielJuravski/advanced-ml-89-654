@@ -6,10 +6,10 @@ import numpy as np
 def calculate_dist(m_row, fx_arr):
     val = 0
     for i in range(len(fx_arr)):
-        val+= (1 - np.sign(m_row[i]*fx_arr[i])) / 2
+        mux = m_row[i]*fx_arr[i]
+        val+= np.max([0, (1-mux)])
 
     return val
-
 
 def validate(param, x_dev, y_dev):
     good = 0

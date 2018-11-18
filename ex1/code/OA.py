@@ -1,7 +1,7 @@
 from .utils import load_data, init_param
 import numpy as np
-init_lr =0.1
-reg_factor = 0.2
+init_lr =0.25
+reg_factor = 0.05
 
 def train_w_vs_all(w, class_vs_all, x, y, i):
     if y == class_vs_all:
@@ -11,7 +11,7 @@ def train_w_vs_all(w, class_vs_all, x, y, i):
 
     d_lr = init_lr/((i+1)**0.5)
     loss = np.max([0, 1-y_binary*np.dot(w,x)])
-    print("w: %d loss: %f" % (class_vs_all, loss))
+  #  print("w: %d loss: %f" % (class_vs_all, loss))
     if (1-y_binary*np.dot(w,x)) >= 0:
         wt = (1-d_lr*reg_factor)*w + d_lr*y_binary*x
     else:
