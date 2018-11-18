@@ -1,4 +1,4 @@
-from code.OA import train
+from code.OA import train, set_learning_params
 from code.utils import load_data
 import numpy as np
 
@@ -43,6 +43,7 @@ def predict(m, w0, w1, w2, w3, x):
 
 
 if __name__ == '__main__':
+    set_learning_params(0.25, 0.05)
     x_train, y_train, x_dev, y_dev = load_data()
     (w0,w1,w2,w3) = train(x_train, y_train)
     validate((w0,w1,w2,w3), x_dev, y_dev)
