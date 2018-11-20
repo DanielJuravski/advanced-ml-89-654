@@ -1,0 +1,10 @@
+To run the program (assuming sklearn packages are installed) run
+
+Python3 main.py
+
+Train data will be loaded to data directory
+Outputs are written to output dir.
+report.pdf is included
+
+Eyal Orbach - ID 015369317
+Daniel Juravski - ID 206082323
