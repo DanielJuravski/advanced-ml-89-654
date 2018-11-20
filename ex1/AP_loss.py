@@ -1,5 +1,5 @@
 import numpy as np
-from src.AP import train, set_learning_params
+from AP import train, set_learning_params
 
 from utils import load_data
 

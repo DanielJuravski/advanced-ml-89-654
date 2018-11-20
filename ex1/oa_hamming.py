@@ -1,5 +1,5 @@
 import numpy as np
-from src.utils import load_data
+from utils import load_data
 
 from OA import train, set_learning_params
 

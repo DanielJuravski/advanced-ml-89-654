@@ -1,4 +1,4 @@
-from .utils import load_data, init_param
+from utils import load_data, init_param
 import numpy as np
 
 init_lr = 0.3

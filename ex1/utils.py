@@ -3,9 +3,6 @@ from sklearn.utils import shuffle
 import numpy as np
 
 
-
-
-
 def load_data():
     # read data
     mnist = fetch_mldata("MNIST original", data_home="./data")
