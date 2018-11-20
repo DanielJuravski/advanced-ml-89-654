@@ -1,6 +1,6 @@
+import numpy as np
 from sklearn.datasets import fetch_mldata
 from sklearn.utils import shuffle
-import numpy as np
 
 
 def load_data():
@@ -28,4 +28,22 @@ def init_param(x_data):
     W = np.random.randn(numOfFeat)
     return W
 
+def calculate_dist_loss(m_row, fx_arr):
+    def loss(a,b):
+        return np.max([0, (1-(a * b))])
+    points_loss = [loss(x[0], x[1]) for x in list(zip(m_row, fx_arr))]
+    return np.sum(points_loss)
 
+
+def calculate_dist_hamming(m_row, fx_arr):
+    def compare_sign (a,b):
+        return (1 - np.sign(a * b)) / 2
+    differences = [compare_sign(x[0], x[1]) for x in list(zip(m_row, fx_arr))]
+    return np.sum(differences)
+
+
+def print_results(results, path):
+    f = open(path,"w")
+    for y in results:
+        f.write("%d\n" % y)
+    f.close()

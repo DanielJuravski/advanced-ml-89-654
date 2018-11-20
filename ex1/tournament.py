@@ -1,5 +1,6 @@
-from utils import init_param
 import numpy as np
+
+from utils import init_param
 
 init_lr =0.25
 reg_factor = 0.05
@@ -43,5 +44,50 @@ def train(x_train, y_train):
 
     return w01v23, w0v1, w2v3
 
+def validate(weights, x_dev, y_dev, dist_func):
+    good = 0
+    bad = 0
+    m = get_m()
+    for i in range(len(y_dev)):
+        x = x_dev[i]
+        y = y_dev[i]
+        y_hat = predict(m, weights, x, dist_func)
+        if y_hat == y:
+            good += 1
+        else:
+            bad += 1
+
+    print ("precentage is: %f" % (good/(good+bad)))
 
 
+def get_m():
+    return np.matrix([[1, 1, 0],
+                      [1, -1, 0],
+                      [-1, 0, 1],
+                      [-1, 0, -1]])
+
+
+def predict(m, weights, x, dist_func):
+    (w01v23, w0v1, w2v3) = weights
+    fx01v23 = np.dot(w01v23, x)
+    fx0v1 = np.dot(w0v1, x)
+    fx2v3 = np.dot(w2v3, x)
+    fx_arr = [fx01v23, fx0v1, fx2v3]
+
+    d0 = dist_func((m[0]).tolist()[0], fx_arr)
+    d1 = dist_func((m[1]).tolist()[0], fx_arr)
+    d2 = dist_func((m[2]).tolist()[0], fx_arr)
+    d3 = dist_func((m[3]).tolist()[0], fx_arr)
+
+    y_hat = np.argmin([d0, d1, d2, d3])
+    return y_hat
+
+def get_test_results(x_data, weights, dist_func):
+    results = []
+    for i in range(len(x_data)):
+        x = x_data[i]
+        m = get_m()
+        y_hat = predict(m, weights, x, dist_func)
+        results.append(y_hat)
+
+    return results
