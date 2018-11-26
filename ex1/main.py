@@ -52,7 +52,7 @@ def run(test_x, train_func, validate_func, get_results_func, calc_dist_func, nam
 
 
 if __name__ == '__main__':
-    x_test = np.loadtxt("x_test.txt")
+    x_test = np.loadtxt("x4pred.txt")
 
     run_OA_hamming(x_test)
     run_AP_hamming(x_test)
