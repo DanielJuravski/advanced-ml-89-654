@@ -1,62 +1,113 @@
+import warnings
+
 import numpy as np
+from sklearn.utils import shuffle
 
-from utils import load_data, calculate_dist_hamming, calculate_dist_loss, print_results
-
-
-def run_OA_hamming(test_x):
-    from OA import set_learning_params, train, validate, get_test_results
-    set_learning_params(0.25, 0.05)
-    run(test_x, train, validate, get_test_results, calculate_dist_hamming, "onevall.ham")
+import model
+import utils
 
 
-def run_AP_hamming(test_x):
-    from AP import set_learning_params, train, validate, get_test_results
-    set_learning_params(0.5, 0.05)
-    run(test_x, train, validate, get_test_results, calculate_dist_hamming, "allpairs.ham")
+def calculate_dist_loss(m_row, fx_arr):
+    def loss(a, b):
+        return np.max([0, (1-(a * b))])
+    points_loss = [loss(x[0], x[1]) for x in list(zip(m_row, fx_arr))]
+    return np.sum(points_loss)
 
 
-def run_tournament_hamming(test_x):
-    from tournament import set_learning_params, train, validate, get_test_results
-    set_learning_params(0.35, 0.05)
-    run(test_x, train, validate, get_test_results, calculate_dist_hamming, "randm.ham")
+def calculate_dist_hamming(m_row, fx_arr):
+    def compare_sign(a, b):
+        return (1 - np.sign(a * b)) / 2
+    differences = [compare_sign(x[0], x[1]) for x in list(zip(m_row, fx_arr))]
+    return np.sum(differences)
 
 
-def run_OA_loss(test_x):
-    from OA import set_learning_params, train, validate, get_test_results
-    set_learning_params(0.25, 0.05)
-    run(test_x, train, validate, get_test_results, calculate_dist_loss, "onevall.loss")
+def get_OA_m():
+    return np.matrix([[ 1,-1,-1,-1],
+                      [-1, 1,-1,-1],
+                      [-1,-1, 1,-1],
+                      [-1,-1,-1, 1]])
 
 
-def run_AP_loss(test_x):
-    from AP import set_learning_params, train, validate, get_test_results
-    set_learning_params(0.5, 0.05)
-    run(test_x, train, validate, get_test_results, calculate_dist_loss, "allpairs.loss")
+def get_AP_m():
+    return np.matrix([[ 1, 1, 1, 0, 0, 0],
+                      [-1, 0, 0, 1, 1, 0],
+                      [ 0,-1, 0,-1, 0, 1],
+                      [ 0, 0,-1, 0,-1,-1]])
+
+def get_exahaustive_m():
+    return np.matrix([[ 1, 1, 1, 1, 1, 1, 1],
+                      [-1,-1,-1,-1, 1, 1, 1],
+                      [-1,-1, 1, 1,-1,-1, 1],
+                      [-1, 1,-1, 1,-1, 1,-1]])
 
 
-def run_tournament_loss(test_x):
-    from tournament import set_learning_params, train, validate, get_test_results
-    set_learning_params(0.35, 0.05)
-    run(test_x, train, validate, get_test_results, calculate_dist_loss, "randm.loss")
+def run_OA_hamming():
+    model.set_learning_params(0.25, 0.05)
+    model.set_m(get_OA_m())
+    model.set_dist_func(calculate_dist_hamming)
+    run("onevall.ham")
 
 
-def run(test_x, train_func, validate_func, get_results_func, calc_dist_func, name):
-    x_train, y_train, x_dev, y_dev = load_data()
-    weights = train_func(x_train, y_train)
+def run_AP_hamming():
+    model.set_learning_params(0.5, 0.05)
+    model.set_m(get_AP_m())
+    model.set_dist_func(calculate_dist_hamming)
+    run("allpairs.ham")
+
+
+def run_custom_hamming():
+    model.set_learning_params(0.5, 0.01)
+    model.set_m(get_exahaustive_m())
+    model.set_dist_func(calculate_dist_hamming)
+    run("randm.ham")
+
+
+def run_OA_loss():
+    model.set_learning_params(0.25, 0.05)
+    model.set_m(get_OA_m())
+    model.set_dist_func(calculate_dist_loss)
+    run("onevall.loss")
+
+
+def run_AP_loss():
+    model.set_learning_params(0.5, 0.05)
+    model.set_m(get_AP_m())
+    model.set_dist_func(calculate_dist_loss)
+    run("allpairs.loss")
+
+
+def run_custom_loss():
+    model.set_learning_params(0.5, 0.01)
+    model.set_m(get_exahaustive_m())
+    model.set_dist_func(calculate_dist_loss)
+    run("randm.loss")
+
+
+def run(name):
+    global x_train
+    global y_train
+    global x_dev
+    global y_dev
+    x_train, y_train = shuffle(x_train, y_train, random_state=1)
+    x_dev, y_dev = shuffle(x_dev, y_dev, random_state=1)
+    weights = model.train(x_train, y_train)
     print("validating: " + name)
-    validate_func(weights, x_dev, y_dev, calc_dist_func)
+    model.validate(weights, x_dev, y_dev)
     print("writing test predictions for " + name)
-    results = get_results_func(test_x, weights, calc_dist_func)
+    results = model.get_test_results(x_test, weights)
     pred_path = "output/test." + name + ".pred"
-    print_results(results, pred_path)
-
+    utils.print_results(results, pred_path)
 
 
 if __name__ == '__main__':
-    x_test = np.loadtxt("x4pred.txt")
 
-    run_OA_hamming(x_test)
-    run_AP_hamming(x_test)
-    run_tournament_hamming(x_test)
-    run_OA_loss(x_test)
-    run_AP_loss(x_test)
-    run_tournament_loss(x_test)
+    warnings.filterwarnings("ignore") # Ignore depricated warning from sklearn
+
+    x_test = np.loadtxt("x4pred.txt")
+    x_train, y_train, x_dev, y_dev = utils.load_data()
+    run_OA_hamming()
+    run_AP_hamming()
+    run_custom_hamming()
+    run_OA_loss()
+    run_AP_loss()
+    run_custom_loss()

@@ -1,9 +1,17 @@
-To run the program (assuming sklearn packages are installed) run
+packages used:
+sklearn
+numpy
+warnings
+
+To run the program (assuming all above packages are installed) run
+####################
 
 Python3 main.py
 
+####################
+
 Train data will be loaded to data directory
-Validation precentages are written to standard output (console/terminal...)
+Validation percentages are written to standard output (console/terminal...)
 test predictions are written to output dir.
 
 report.pdf is included
