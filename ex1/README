@@ -2,6 +2,7 @@ packages used:
 sklearn
 numpy
 warnings
+os
 
 To run the program (assuming all above packages are installed) run
 ####################

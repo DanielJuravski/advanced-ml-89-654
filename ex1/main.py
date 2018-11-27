@@ -1,3 +1,4 @@
+import os
 import warnings
 
 import numpy as np
@@ -6,6 +7,7 @@ from sklearn.utils import shuffle
 import model
 import utils
 
+OUTPUT_DIR="output"
 
 def calculate_dist_loss(m_row, fx_arr):
     def loss(a, b):
@@ -95,7 +97,10 @@ def run(name):
     model.validate(weights, x_dev, y_dev)
     print("writing test predictions for " + name)
     results = model.get_test_results(x_test, weights)
-    pred_path = "output/test." + name + ".pred"
+
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+    pred_path = OUTPUT_DIR + "/test." + name + ".pred"
     utils.print_results(results, pred_path)
 
 
