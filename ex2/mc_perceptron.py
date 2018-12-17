@@ -49,7 +49,7 @@ def train_perceptron(perceptron, train_data):
 
         perc = (good / (good + bad)) * 100
         print("epoch no: %d acc = %.2f" % (epoch, perc))
-    return w
+    return (w, b)
 
 
 def test(perceptron, test_data):
