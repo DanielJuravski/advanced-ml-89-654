@@ -73,8 +73,8 @@ def test(perceptron, test_data):
 if __name__ == '__main__':
     x_size = 8*16
     y_size = 26
-    train_data = utils.load_train("data/letters.train.data")
+    train_data = utils.load_data("data/letters.train.data")
     perceptron = init_perceptron(x_size, y_size)
     perceptron = train_perceptron(perceptron, train_data)
-    test_data = utils.load_train("data/letters.test.data")
+    test_data = utils.load_data("data/letters.test.data")
     test_acc = test(perceptron, test_data)

@@ -1,3 +1,4 @@
+from datetime import datetime
 from random import shuffle
 
 import utils
@@ -26,6 +27,7 @@ def phi(x, y_candidate, y_size):
 def train_perceptron(perceptron, train_data, y_size):
     w, b = perceptron
     for epoch in range(EPOCHS):
+        print("epoch: %d started at %s" %(epoch, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         good = bad = 0.0
         shuffle(train_data)
         for example in train_data:
@@ -74,8 +76,8 @@ def test(perceptron, test_data, y_size):
 if __name__ == '__main__':
     x_size = 8*16
     y_size = 26
-    train_data = utils.load_train("data/letters.train.data")
+    train_data = utils.load_data("data/letters.train.data")
     perceptron = init_perceptron(x_size, y_size)
     perceptron = train_perceptron(perceptron, train_data, y_size)
-    test_data = utils.load_train("data/letters.test.data")
+    test_data = utils.load_data("data/letters.test.data")
     test_acc = test(perceptron, test_data, y_size)
