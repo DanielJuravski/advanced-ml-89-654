@@ -4,7 +4,7 @@ from random import shuffle
 import utils
 import numpy as np
 
-EPOCHS = 1
+EPOCHS = 5
 LR = 1
 
 
@@ -56,7 +56,7 @@ def train_perceptron(perceptron, data_by_index, y_size, vocab_size):
     for epoch in range(EPOCHS):
         print("epoch: %d started at %s" %(epoch, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         good = bad = 0.0
-        word_shuffle(train_data)
+        train_data = word_shuffle(train_data)
         for example in train_data:
             x = np.array(example[utils.PIXEL_VECTOR])
             y = utils.L2I(example[utils.LETTER])
@@ -138,7 +138,7 @@ def predict_word(perceptron, word_lines, y_size, vocab_size):
             bad += 1
         else:
             good += 1
-    print("word was " + y_word)
+    print("word was %s first letter id is %d" % (y_word, word_lines[0][utils.ID]))
     return (good, bad)
 
 
@@ -179,5 +179,5 @@ if __name__ == '__main__':
     perceptron = init_perceptron(x_size, y_size, vocab_size)
     perceptron = train_perceptron(perceptron, data_by_index, y_size, vocab_size)
     test_data = utils.load_data("data/letters.test.data")
-    shrinked_test_data = word_shuffle(test_data, 20)
+    shrinked_test_data = word_shuffle(test_data)
     test_acc = test(perceptron, shrinked_test_data, y_size, vocab_size)
