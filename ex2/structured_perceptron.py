@@ -1,12 +1,14 @@
 from datetime import datetime
+import random
 from random import shuffle
 
 import utils
 import numpy as np
 
-
-EPOCHS = 70
-LR = 0.0001
+random.seed(3)
+np.random.seed(3)
+EPOCHS = 10
+LR = 0.1
 
 
 def init_perceptron(x_size, y_size):

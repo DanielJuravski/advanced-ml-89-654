@@ -1,12 +1,15 @@
 import utils
 import numpy as np
+import random
 from random import shuffle
 
-EPOCHS = 70
-LR = 0.0001
+random.seed(3)
+np.random.seed(3)
+EPOCHS = 10
+LR = 0.1
 
 def init_perceptron(x_size, y_size):
-    eps = np.sqrt(6) / np.sqrt(x_size + y_size)
+    eps =0# np.sqrt(6) / np.sqrt(x_size + y_size)
     w = np.random.uniform(-eps, eps, (y_size, x_size))
     b = np.random.uniform(-eps, eps, y_size)
     return (w, b)

@@ -1,15 +1,18 @@
 from datetime import datetime
+import random
 from random import shuffle
 
 import utils
 import numpy as np
 
-EPOCHS = 5
-LR = 1
+random.seed(3)
+np.random.seed(3)
+EPOCHS = 10
+LR = 0.1
 
 
 def init_perceptron(x_size, y_size, vocab_size):
-    eps = np.sqrt(6) / np.sqrt(x_size + y_size)
+    eps = 0#np.sqrt(6) / np.sqrt(x_size + y_size)
     size = (y_size * x_size) + (vocab_size * y_size)
     w = np.random.uniform(-eps, eps, size)
     b = np.random.uniform(-eps, eps, y_size)
@@ -23,8 +26,7 @@ def phi(x, y_cand, y_size, vocab_size, prev_y):
     x_start = y_cand*x_size
     phi_xyprevy[x_start:x_start+x_size] = x
 
-    # prevy_start = y_cand*vocab_size
-    prevy_start= (y_size * x_size) + (y_cand * y_size)
+    prevy_start= (y_size * x_size) + (vocab_size * y_cand )
     phi_xyprevy[prevy_start + prev_y] = 1
     return phi_xyprevy
 
@@ -70,7 +72,7 @@ def train_perceptron(perceptron, data_by_index, y_size, vocab_size):
                     prev_y = utils.L2I(prev_example[utils.LETTER])
 
             phis = [phi(x, y_cand, y_size, vocab_size, prev_y) for y_cand in range(y_size)]
-            results = [np.dot(w, phi_xy)  for i, phi_xy in enumerate(phis)]
+            results = [np.dot(w, phi_xy) + b[p_i] for p_i, phi_xy in enumerate(phis)]
             y_hat = int(np.argmax(results))
             w = w + (LR * (phis[y] - phis[y_hat]))
             b[y] = b[y] + LR
@@ -112,7 +114,7 @@ def predict_word(perceptron, word_lines, y_size, vocab_size):
         for j in range(y_size):
             curr_char = j
             phis = [phi(word_lines[i][utils.PIXEL_VECTOR], curr_char, y_size, vocab_size, prev_cand) for prev_cand in range(y_size)]
-            results = [np.dot(w, phi_xy) + D_S[i-1][p_i] for p_i, phi_xy in enumerate(phis)]
+            results = [np.dot(w, phi_xy) + b[p_i] + D_S[i-1][p_i] for p_i, phi_xy in enumerate(phis)]
             i_best = int(np.argmax(results))
             d_best = results[i_best]
             D_S[i][j] = d_best
@@ -179,5 +181,5 @@ if __name__ == '__main__':
     perceptron = init_perceptron(x_size, y_size, vocab_size)
     perceptron = train_perceptron(perceptron, data_by_index, y_size, vocab_size)
     test_data = utils.load_data("data/letters.test.data")
-    shrinked_test_data = word_shuffle(test_data)
-    test_acc = test(perceptron, shrinked_test_data, y_size, vocab_size)
+    # shrinked_test_data = word_shuffle(test_data)
+    test_acc = test(perceptron, test_data, y_size, vocab_size)
