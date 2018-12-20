@@ -7,8 +7,8 @@ import numpy as np
 
 random.seed(3)
 np.random.seed(3)
-EPOCHS = 10
-LR = 0.1
+EPOCHS = 20
+LR = 0.01
 
 
 def init_perceptron(x_size, y_size, vocab_size):
@@ -106,7 +106,7 @@ def predict_word(perceptron, word_lines, y_size, vocab_size):
     for i in range(y_size):
         curr_char = i
         phi_xy = phi(x, curr_char, y_size, vocab_size, prev_char)
-        s = np.dot(w, phi_xy)
+        s = np.dot(w, phi_xy) + b[curr_char]
         D_S[0][i] = s
         D_PI[0][i] = 26
     #// ===================== RECURSION ===================== //
@@ -114,7 +114,7 @@ def predict_word(perceptron, word_lines, y_size, vocab_size):
         for j in range(y_size):
             curr_char = j
             phis = [phi(word_lines[i][utils.PIXEL_VECTOR], curr_char, y_size, vocab_size, prev_cand) for prev_cand in range(y_size)]
-            results = [np.dot(w, phi_xy) + b[p_i] + D_S[i-1][p_i] for p_i, phi_xy in enumerate(phis)]
+            results = [np.dot(w, phi_xy) + b[curr_char] + D_S[i-1][p_i] for p_i, phi_xy in enumerate(phis)]
             i_best = int(np.argmax(results))
             d_best = results[i_best]
             D_S[i][j] = d_best
@@ -180,6 +180,9 @@ if __name__ == '__main__':
 
     perceptron = init_perceptron(x_size, y_size, vocab_size)
     perceptron = train_perceptron(perceptron, data_by_index, y_size, vocab_size)
+    w,b = perceptron
+    np.save("w_mat", w)
+    np.save("b_vec", b)
     test_data = utils.load_data("data/letters.test.data")
     # shrinked_test_data = word_shuffle(test_data)
     test_acc = test(perceptron, test_data, y_size, vocab_size)
