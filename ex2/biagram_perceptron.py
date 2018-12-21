@@ -26,7 +26,7 @@ def phi(x, y_cand, y_size, vocab_size, prev_y):
     x_start = y_cand*x_size
     phi_xyprevy[x_start:x_start+x_size] = x
 
-    prevy_start= (y_size * x_size) + (vocab_size * y_cand )
+    prevy_start = (y_size * x_size) + (vocab_size * y_cand )
     phi_xyprevy[prevy_start + prev_y] = 1
     return phi_xyprevy
 
