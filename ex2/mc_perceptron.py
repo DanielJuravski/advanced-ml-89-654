@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import sys
+
 import utils
 import numpy as np
 import random
@@ -63,12 +65,20 @@ def test(perceptron, test_data):
 
 
 if __name__ == '__main__':
+    train_input_file = "data/letters.train.data"
+    test_input_file = "data/letters.test.data"
+    if len(sys.argv) == 3:
+        train_input_file = sys.argv[1]
+        test_input_file = sys.argv[2]
+
     print("started at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     x_size = 8*16
     y_size = 26
-    train_data = utils.load_data("data/letters.train.data")
+
+    train_data = utils.load_data(train_input_file)
     perceptron = init_perceptron(x_size, y_size)
     perceptron = train_perceptron(perceptron, train_data)
-    test_data = utils.load_data("data/letters.test.data")
+
+    test_data = utils.load_data(test_input_file)
     test_acc = test(perceptron, test_data)
     print("finished at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

@@ -2,6 +2,7 @@ import random
 from datetime import datetime
 
 import numpy as np
+import sys
 
 import utils
 from utils import get_results
@@ -35,7 +36,7 @@ def predict_word(perceptron, word_lines):
     # to use the viterbi algorithem, a greedy one at a time prediction will produce same results
     for line_i, line in enumerate(word_lines):
         phis = [phi_xi_yi(line[utils.PIXEL_VECTOR], y_candidate) for y_candidate in range(y_size)]
-        results = [np.dot(w, (prev_seq_phi + phi_xy)) + b[p_i] for p_i, phi_xy in enumerate(phis)]
+        results = [np.dot(w, phi_xy) + b[p_i] for p_i, phi_xy in enumerate(phis)]
         i_best = int(np.argmax(results))
 
         prev_seq_phi += phis[i_best]
@@ -103,11 +104,17 @@ def test(perceptron, test_data):
 
 
 if __name__ == '__main__':
+    train_input_file = "data/letters.train.data"
+    test_input_file = "data/letters.test.data"
+    if len(sys.argv) == 3:
+        train_input_file = sys.argv[1]
+        test_input_file = sys.argv[2]
+
     x_size = 8*16
     y_size = 26
-    train_data = utils.load_data("data/letters.train.data")
+    train_data = utils.load_data(train_input_file)
     perceptron = init_perceptron()
     perceptron = train_perceptron(perceptron, train_data)
-    test_data = utils.load_data("data/letters.test.data")
+    test_data = utils.load_data(test_input_file)
     test_acc = test(perceptron, test_data)
     print("finished at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

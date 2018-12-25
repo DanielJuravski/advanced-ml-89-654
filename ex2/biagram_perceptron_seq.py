@@ -28,18 +28,17 @@ def phi_xi_yi(x, y_cand, prev_y):
     phi = np.zeros(size)
     x_start = y_cand*x_size
     phi[x_start:x_start+x_size] = x
-    transition_i = int(prev_y) + (y_cand * y_size)
+    transition_i = int(prev_y) + (y_cand * vocab_size)
     index = (y_size * x_size) + transition_i
-    phi[index] = 1
+    phi[index] = 1.0
     return phi
 
 
 def train_perceptron(perceptron, data_by_index):
     train_data = list(data_by_index.values())
     for epoch in range(EPOCHS):
-        print("epoch: %d started at %s" %(epoch, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        print("epoch: %d started at %s" % (epoch, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         good = bad = 0.0
-        train_data = word_shuffle(train_data)
         word_lines = []
         for line_i, line in enumerate(train_data):
             if line[utils.NEXT_ID] == -1:
@@ -55,6 +54,7 @@ def train_perceptron(perceptron, data_by_index):
 
         perc = (good / (good + bad)) * 100
         print("epoch no: %d acc = %.2f" % (epoch, perc))
+        train_data = word_shuffle(train_data)
     return perceptron
 
 
@@ -95,12 +95,14 @@ def predict_word(perceptron, word_lines, do_print=False):
 
     if do_print:
         y_word = ""
+        pred_word = ""
         for i, line in enumerate(word_lines):
             pred = int(y_hat[i])
             y = utils.L2I(line[utils.LETTER])
             y_word +=line[utils.LETTER]
+            pred_word +=utils.I2L(pred)
             print("pred=%d true=%d " %(pred, y))
-        print("word was %s first letter id is %d" % (y_word, word_lines[0][utils.ID]))
+        print("word: %s pred: %s first letter id is %d" % (y_word, pred_word, word_lines[0][utils.ID]))
     return y_hat
 
 
@@ -132,7 +134,7 @@ def test(perceptron, test_data):
     word_lines = []
     all_words_resuls = []
     for ex_i, line in enumerate(test_data):
-        print("predicting line %d from %d" % (ex_i, len(word_lines)))
+        # print("predicting line %d from %d" % (ex_i, len(word_lines)))
         if line[utils.NEXT_ID] == -1:
             word_lines.append(line)
             y_hat = predict_word(perceptron, word_lines, True)
