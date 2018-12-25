@@ -1,12 +1,11 @@
-from datetime import datetime
 import random
-
 import sys
+from datetime import datetime
 
-from utils import word_shuffle
+import numpy as np
 
 import utils
-import numpy as np
+from utils import word_shuffle
 
 random.seed(3)
 np.random.seed(3)

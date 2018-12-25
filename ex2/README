@@ -1,0 +1,62 @@
+Eyal Orbach - ID 015369317
+ Daniel Juravski - ID 206082323
+
+===============================
+using python 3.6
+
+packages:
+numpy
+matplotlib
+
+====================================================
+1)
+mc_perceptron.py
+runs multiclass perceptron
+
+if no arguments are given assumes:
+- train file resides in ./data/letters.train.data
+- test file resides in ./data/letters.test.data
+
+otherwise can be supplied when running script as so:
+
+python mc_perceptron.py <train_file> <test_file>
+
+====================================================
+2)
+structured_perceptron.py
+runs structured perceptron with no added features
+
+if no arguments are given assumes:
+- train file resides in ./data/letters.train.data
+- test file resides in ./data/letters.test.data
+
+otherwise can be supplied when running script as so:
+
+python structured_perceptron.py <train_file> <test_file>
+
+====================================================
+3)
+biagram_perceptron.py
+runs structured perceptron with no previos letter feature.
+outputs test prediction
+
+
+if no arguments are given assumes:
+- train file resides in ./data/letters.train.data
+- test file resides in ./data/letters.test.data
+- prediction output will be written to ./test.pred
+
+otherwise can be supplied when running script as so:
+
+python structured_perceptron.py <train_file> <test_file> <output_file>
+
+====================================================
+4)
+heatmap.py
+
+loads w_mat.npy file that was outputed to current directory by biagram_perceptron.py.
+outputs w_heatmap.png to current directory.
+
+python heatmap.py
+
+

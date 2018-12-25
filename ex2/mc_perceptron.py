@@ -1,11 +1,11 @@
-from datetime import datetime
-
+import random
 import sys
+from datetime import datetime
+from random import shuffle
+
+import numpy as np
 
 import utils
-import numpy as np
-import random
-from random import shuffle
 
 random.seed(3)
 np.random.seed(3)
