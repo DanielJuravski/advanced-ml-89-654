@@ -11,7 +11,7 @@ import numpy as np
 random.seed(3)
 np.random.seed(3)
 EPOCHS = 3
-LR = 0.1
+LR = 1
 
 
 def init_perceptron():

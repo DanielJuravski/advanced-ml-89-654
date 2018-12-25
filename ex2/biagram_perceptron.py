@@ -1,6 +1,6 @@
 from datetime import datetime
 import random
-from random import shuffle
+from utils import word_shuffle
 
 import utils
 import numpy as np
@@ -31,25 +31,7 @@ def phi(x, y_cand, y_size, vocab_size, prev_y):
     return phi_xyprevy
 
 
-def word_shuffle(train_data, shrink=-1):
-    word = []
-    all_words =[]
-    for line in train_data:
-        if line[utils.LETTER_POSITION] == 1:
-            all_words.append(word)
-            word = [line]
-        else:
-            word.append(line)
 
-    shuffle(all_words)
-    shuffled_lines = []
-    if shrink == -1:
-        shrink = len(all_words)
-    for word in all_words[:shrink]:
-        for line in word:
-            shuffled_lines.append(line)
-
-    return shuffled_lines
 
 
 def train_perceptron(perceptron, data_by_index, y_size, vocab_size):

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import utils
 import numpy as np
 import random
@@ -9,19 +11,10 @@ EPOCHS = 70
 LR = 0.0001
 
 def init_perceptron(x_size, y_size):
-    eps =0# np.sqrt(6) / np.sqrt(x_size + y_size)
+    eps = np.sqrt(6) / np.sqrt(x_size + y_size)
     w = np.random.uniform(-eps, eps, (y_size, x_size))
     b = np.random.uniform(-eps, eps, y_size)
     return (w, b)
-
-
-def get_eta(i, y, y_hat):
-    if i == y:
-        return 1
-    elif i == y_hat:
-        return -1
-    else:
-        return 0
 
 
 def train_perceptron(perceptron, train_data):
@@ -36,10 +29,6 @@ def train_perceptron(perceptron, train_data):
             y_hat = np.argmax(mul)
             if y != y_hat:
                 bad += 1
-                # eta_vec = np.zeros(26)
-                # eta_vec[y] = LR
-                # eta_vec[y_hat] = -LR
-                # w = w + (np.dot(np.array(eta_vec), x))
                 for i, row in enumerate(w):
                     if i == y:
                         w[i] = row + LR * x
@@ -74,6 +63,7 @@ def test(perceptron, test_data):
 
 
 if __name__ == '__main__':
+    print("started at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     x_size = 8*16
     y_size = 26
     train_data = utils.load_data("data/letters.train.data")
@@ -81,3 +71,4 @@ if __name__ == '__main__':
     perceptron = train_perceptron(perceptron, train_data)
     test_data = utils.load_data("data/letters.test.data")
     test_acc = test(perceptron, test_data)
+    print("finished at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

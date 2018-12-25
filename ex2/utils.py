@@ -1,3 +1,5 @@
+from random import shuffle
+
 ID = 0
 LETTER = 1
 NEXT_ID = 2
@@ -35,3 +37,40 @@ def L2I(letter):
     return ALPHABET.index(letter)
 
 
+def word_shuffle(train_data, shrink=-1):
+    word = []
+    all_words =[]
+    for line in train_data:
+        if line[LETTER_POSITION] == 1:
+            all_words.append(word)
+            word = [line]
+        else:
+            word.append(line)
+
+    shuffle(all_words)
+    shuffled_lines = []
+    if shrink == -1:
+        shrink = len(all_words)
+    for word in all_words[:shrink]:
+        for line in word:
+            shuffled_lines.append(line)
+
+    return shuffled_lines
+
+
+def get_results(word_lines, y_hat):
+    good = bad = 0
+    for i, line in enumerate(word_lines):
+        y = L2I(line[LETTER])
+        if y == y_hat[i]:
+            good += 1
+        else:
+            bad += 1
+    return good, bad
+
+
+def print_results(all_words_pred, output_file):
+    with open(output_file, "w") as f:
+        for word in all_words_pred:
+            for letter in word:
+                f.write("%s\n" % I2L(int(letter)))
