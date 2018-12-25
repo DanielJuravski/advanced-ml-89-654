@@ -1,4 +1,5 @@
 from random import shuffle
+import numpy as np
 
 ID = 0
 LETTER = 1
@@ -39,7 +40,7 @@ def L2I(letter):
 
 def word_shuffle(train_data, shrink=-1):
     word = []
-    all_words =[]
+    all_words = []
     for line in train_data:
         if line[LETTER_POSITION] == 1:
             all_words.append(word)

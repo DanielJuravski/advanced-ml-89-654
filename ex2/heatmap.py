@@ -29,7 +29,7 @@ def plot_heatmap(w):
     plt.xlabel("next letter")
     plt.ylabel("previous letter")
     ax.set_yticklabels(utils.ALPHABET)
-    ax.set_title("Charchters trasitions Parameters")
+    ax.set_title("Characters Transitions Parameters", color="blue")
     fig.tight_layout()
     plt.savefig("w_heatmap.png")
 
