@@ -12,12 +12,19 @@ np.random.seed(3)
 EPOCHS = 3
 LR = 1
 
+w_accumelator = None
+b_accumelator = None
+t_counter = 0
 
 def init_perceptron():
     eps = 0#np.sqrt(6) / np.sqrt(x_size + y_size)
     size = (y_size * x_size) + (vocab_size * y_size)
     w = np.random.uniform(-eps, eps, size)
     b = np.random.uniform(-eps, eps, y_size)
+    global w_accumelator, b_accumelator, t_counter
+    w_accumelator = np.zeros(size)
+    b_accumelator = np.zeros(y_size)
+    t_counter = 0
     return (w,b)
 
 
@@ -36,6 +43,7 @@ def phi_xi_yi(x, y_cand, prev_y):
 def train_perceptron(perceptron, data_by_index):
     train_data = list(data_by_index.values())
     for epoch in range(EPOCHS):
+        train_data = word_shuffle(train_data)
         print("epoch: %d started at %s" % (epoch, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         good = bad = 0.0
         word_lines = []
@@ -53,7 +61,6 @@ def train_perceptron(perceptron, data_by_index):
 
         perc = (good / (good + bad)) * 100
         print("epoch no: %d acc = %.2f" % (epoch, perc))
-        train_data = word_shuffle(train_data)
     return perceptron
 
 
@@ -107,6 +114,9 @@ def predict_word(perceptron, word_lines, do_print=False):
 
 def update_perceptron(perceptron, word_lines, y_hat_vec):
     w, b = perceptron
+    global w_accumelator, b_accumelator, t_counter
+    t_counter += len(word_lines)
+    do_update = False
     for ex_i, example in enumerate(word_lines):
         x = np.array(example[utils.PIXEL_VECTOR])
         y = utils.L2I(example[utils.LETTER])
@@ -120,12 +130,15 @@ def update_perceptron(perceptron, word_lines, y_hat_vec):
 
         y_hat = int(y_hat_vec[ex_i])
         if y != y_hat:
+            do_update = True
             phi_y = phi_xi_yi(x, y, prev_y)
             phi_y_hat = phi_xi_yi(x, y_hat, prev_y_hat)
-            w = w + (LR * (phi_y - phi_y_hat))
-            b[y] = b[y] + LR
-            b[y_hat] = b[y_hat] - LR
-
+            w_accumelator += (LR * (phi_y - phi_y_hat))
+            b_accumelator[y] += LR
+            b_accumelator[y_hat] -= LR
+    if do_update:
+        w += (w_accumelator / t_counter)
+        b += (b_accumelator / t_counter)
     return (w, b)
 
 def test(perceptron, test_data):

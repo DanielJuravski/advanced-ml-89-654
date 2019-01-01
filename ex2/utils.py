@@ -58,6 +58,26 @@ def word_shuffle(train_data, shrink=-1):
 
     return shuffled_lines
 
+def word_block_shuffle(train_data, shrink=-1):
+    word = []
+    word_block=[]
+    all_words = []
+    for line in train_data:
+        if line[LETTER_POSITION] == 1:
+            all_words.append(word)
+            word = [line]
+        else:
+            word.append(line)
+
+    shuffle(all_words)
+    shuffled_lines = []
+    if shrink == -1:
+        shrink = len(all_words)
+    for word in all_words[:shrink]:
+        for line in word:
+            shuffled_lines.append(line)
+
+    return shuffled_lines
 
 def get_results(word_lines, y_hat):
     good = bad = 0
@@ -75,3 +95,8 @@ def print_results(all_words_pred, output_file):
         for word in all_words_pred:
             for letter in word:
                 f.write("%s\n" % I2L(int(letter)))
+
+def print_results_by_letter(all_letters_pred, output_file):
+    with open(output_file, "w") as f:
+        for letter in all_letters_pred:
+            f.write("%s\n" % I2L(int(letter)))
