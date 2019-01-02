@@ -1,3 +1,6 @@
+#Notice this is structured perceptron without biagram features
+#The structured perceptron with biagram features is biagram_perceptron.py
+
 import random
 import sys
 from datetime import datetime
@@ -9,15 +12,11 @@ from utils import get_results
 
 random.seed(3)
 np.random.seed(3)
-EPOCHS = 70
-LR = 0.0001
-
-w_accumelator = None
-b_accumelator = None
-t_counter = 0
+EPOCHS = 30
+LR = 1
 
 def init_perceptron():
-    eps = np.sqrt(6) / np.sqrt(x_size + y_size)
+    eps = 0#np.sqrt(6) / np.sqrt(x_size + y_size)
     w = np.random.uniform(-eps, eps, y_size *x_size)
     b = np.random.uniform(-eps, eps, y_size)
     global w_accumelator, b_accumelator, t_counter
@@ -63,12 +62,12 @@ def update_perceptron(perceptron, word_lines, y_hat_vec):
         if y != y_hat:
             phi_y = phi_xi_yi(x, y)
             phi_y_hat = phi_xi_yi(x, y_hat)
-            w_accumelator += (LR * (phi_y - phi_y_hat))
-            b_accumelator[y] += LR
-            b_accumelator[y_hat] -= LR
-            w += (w_accumelator / t_counter)
-            b += (b_accumelator / t_counter)
+            w += (LR * (phi_y - phi_y_hat))
+            b[y] += LR
+            b[y_hat] -= LR
 
+    w_accumelator += w
+    b_accumelator += b
     return w, b
 
 
@@ -114,6 +113,14 @@ def test(perceptron, test_data):
     return perc
 
 
+def apply_average_update(w, w_accumelator, b, b_accumelator, t_counter):
+    wdelta = w_accumelator / float(t_counter)
+    bdelta = b_accumelator / float(t_counter)
+    w += wdelta
+    b += bdelta
+    return w,b
+
+
 if __name__ == '__main__':
     train_input_file = "data/letters.train.data"
     test_input_file = "data/letters.test.data"
@@ -123,9 +130,18 @@ if __name__ == '__main__':
 
     x_size = 8*16
     y_size = 26
+
+    w_accumelator = None
+    b_accumelator = None
+    t_counter = 0
+
     train_data = utils.load_data(train_input_file)
     perceptron = init_perceptron()
+    w,b = perceptron
+    w0 = np.copy(w)
+    b0 = np.copy(b)
     perceptron = train_perceptron(perceptron, train_data)
+    wf, bf = apply_average_update(w0, w_accumelator, b0, b_accumelator, t_counter)
     test_data = utils.load_data(test_input_file)
-    test_acc = test(perceptron, test_data)
+    test_acc = test((wf, bf), test_data)
     print("finished at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

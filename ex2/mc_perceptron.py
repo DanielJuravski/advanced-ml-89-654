@@ -9,15 +9,12 @@ import utils
 
 random.seed(3)
 np.random.seed(3)
-EPOCHS = 70
-LR = 0.0001
+EPOCHS = 30
+LR = 1
 
-w_accumelator = None
-b_accumelator = None
-t_counter = 0
 
 def init_perceptron(x_size, y_size):
-    eps = np.sqrt(6) / np.sqrt(x_size + y_size)
+    eps = 0#np.sqrt(6) / np.sqrt(x_size + y_size)
     w = np.random.uniform(-eps, eps, (y_size, x_size))
     b = np.random.uniform(-eps, eps, y_size)
     global w_accumelator, b_accumelator, t_counter
@@ -30,6 +27,7 @@ def init_perceptron(x_size, y_size):
 def train_perceptron(perceptron, train_data):
     w,b = perceptron
     for epoch in range(EPOCHS):
+        shuffle(train_data)
         good = bad = 0.0
         for e_i, example in enumerate(train_data):
             # print("iter %d" % e_i)
@@ -37,34 +35,34 @@ def train_perceptron(perceptron, train_data):
             y = utils.L2I(example[utils.LETTER])
             mul = np.dot(w, x) + b
             y_hat = np.argmax(mul)
-            wt = np.zeros(w.shape)
-            bt = np.zeros(b.shape)
             global w_accumelator, b_accumelator, t_counter
             t_counter += 1
             if y != y_hat:
                 bad += 1
                 for i, row in enumerate(w):
                     if i == y:
-                        wt[i] += LR * x
-                        bt[i] += LR
+                        w[i] += LR * x
+                        b[i] += LR
                     elif i==y_hat:
-                        wt[i] -= LR * x
-                        bt[i] -= LR
-
-                w_accumelator += wt
-                b_accumelator += bt
-                wdelta = w_accumelator / t_counter
-                bdelta = b_accumelator / t_counter
-                w += wdelta
-                b += bdelta
+                        w[i] -= LR * x
+                        b[i] -= LR
 
             else:
                 good += 1
 
+            w_accumelator += w
+            b_accumelator += b
         perc = (good / (good + bad)) * 100
         print("epoch no: %d acc = %.2f" % (epoch, perc))
-        shuffle(train_data)
     return (w, b)
+
+
+def apply_average_update(w, w_accumelator, b, b_accumelator, t_counter):
+    wdelta = w_accumelator / float(t_counter)
+    bdelta = b_accumelator / float(t_counter)
+    w += wdelta
+    b += bdelta
+    return w,b
 
 
 def test(perceptron, test_data):
@@ -98,11 +96,19 @@ if __name__ == '__main__':
     x_size = 8*16
     y_size = 26
 
+    w_accumelator = None
+    b_accumelator = None
+    t_counter = 0
+
     train_data = utils.load_data(train_input_file)
     perceptron = init_perceptron(x_size, y_size)
+    w,b = perceptron
+    w0 = np.copy(w)
+    b0 = np.copy(b)
     perceptron = train_perceptron(perceptron, train_data)
+    wf,bf = apply_average_update( w0, w_accumelator, b0, b_accumelator, t_counter)
 
     test_data = utils.load_data(test_input_file)
-    test_results = test(perceptron, test_data)
+    test_results = test((wf,bf), test_data)
     utils.print_results_by_letter(test_results, "multiclass.pred")
     print("finished at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

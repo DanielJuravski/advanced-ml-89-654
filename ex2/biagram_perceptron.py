@@ -1,3 +1,6 @@
+#Notice this is the structured perceptron with biagram features
+#This is the program that produces structured.pred
+
 import random
 import sys
 from datetime import datetime
@@ -11,10 +14,6 @@ random.seed(3)
 np.random.seed(3)
 EPOCHS = 3
 LR = 1
-
-w_accumelator = None
-b_accumelator = None
-t_counter = 0
 
 def init_perceptron():
     eps = 0#np.sqrt(6) / np.sqrt(x_size + y_size)
@@ -115,8 +114,7 @@ def predict_word(perceptron, word_lines, do_print=False):
 def update_perceptron(perceptron, word_lines, y_hat_vec):
     w, b = perceptron
     global w_accumelator, b_accumelator, t_counter
-    t_counter += len(word_lines)
-    do_update = False
+    t_counter += 1
     for ex_i, example in enumerate(word_lines):
         x = np.array(example[utils.PIXEL_VECTOR])
         y = utils.L2I(example[utils.LETTER])
@@ -130,15 +128,14 @@ def update_perceptron(perceptron, word_lines, y_hat_vec):
 
         y_hat = int(y_hat_vec[ex_i])
         if y != y_hat:
-            do_update = True
             phi_y = phi_xi_yi(x, y, prev_y)
             phi_y_hat = phi_xi_yi(x, y_hat, prev_y_hat)
-            w_accumelator += (LR * (phi_y - phi_y_hat))
-            b_accumelator[y] += LR
-            b_accumelator[y_hat] -= LR
-    if do_update:
-        w += (w_accumelator / t_counter)
-        b += (b_accumelator / t_counter)
+            w += (LR * (phi_y - phi_y_hat))
+            b[y] += LR
+            b[y_hat] -= LR
+
+    w_accumelator += w
+    b_accumelator += b
     return (w, b)
 
 def test(perceptron, test_data):
@@ -171,6 +168,15 @@ def fill_data_by_index(train_data):
 
     return by_idx
 
+
+def apply_average_update(w, w_accumelator, b, b_accumelator, t_counter):
+    wdelta = w_accumelator / float(t_counter)
+    bdelta = b_accumelator / float(t_counter)
+    w += wdelta
+    b += bdelta
+    return w,b
+
+
 if __name__ == '__main__':
     x_size = 8*16
     y_size = 26
@@ -178,7 +184,7 @@ if __name__ == '__main__':
 
     train_input_file = "data/letters.train.data"
     test_input_file = "data/letters.test.data"
-    output_file = "test.pred"
+    output_file = "structured.pred"
     if len(sys.argv) == 4:
         train_input_file = sys.argv[1]
         test_input_file = sys.argv[2]
@@ -187,13 +193,20 @@ if __name__ == '__main__':
     train_data = utils.load_data(train_input_file)
     data_by_index = fill_data_by_index(train_data)
 
+    w_accumelator = None
+    b_accumelator = None
+    t_counter = 0
+
     perceptron = init_perceptron()
-    perceptron = train_perceptron(perceptron, data_by_index)
     w,b = perceptron
-    np.save("w_mat", w)
-    np.save("b_vec", b)
+    w0 = np.copy(w)
+    b0 = np.copy(b)
+    perceptron = train_perceptron(perceptron, data_by_index)
+    wf, bf = apply_average_update(w0, w_accumelator, b0, b_accumelator, t_counter)
+    np.save("w_mat", wf)
+    np.save("b_vec", bf)
 
     test_data = utils.load_data(test_input_file)
-    all_words_pred = test(perceptron, test_data)
+    all_words_pred = test((wf,bf), test_data)
     utils.print_results(all_words_pred, output_file)
     print("finished at %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
