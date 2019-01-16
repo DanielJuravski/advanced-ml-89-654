@@ -106,11 +106,12 @@ class GeneratorNet(torch.nn.Module):
         self.hidden1 = nn.Linear(5, 10)
         self.out = nn.Linear(10, n_out)
         self.f = torch.tanh
-        self.dropout = nn.Dropout(G_REGULARIZATION_RATE)
+        self.regularization = nn.Dropout(G_REGULARIZATION_RATE)
+
 
     def forward(self, x):
-        x = self.f(self.dropout(self.hidden0(x)))
-        x = self.f(self.dropout(self.hidden1(x)))
+        x = self.f(self.regularization(self.hidden0(x)))
+        x = self.f(self.regularization(self.hidden1(x)))
         x = self.f(self.out(x))
 
         return x
@@ -230,12 +231,18 @@ if __name__ == '__main__':
         BATCH_SIZE = int(sys.argv[2])
         EPOCHS = int(sys.argv[3])
         G_REGULARIZATION_RATE = float(sys.argv[4])
+        #D_REGULARIZATION_RATE = float(sys.argv[5])
+        #REG_TYPE = sys.argv[6]
+
 
     else:
-        DATA_TYPE = 'spiral'
+        DATA_TYPE = 'parabola'
         BATCH_SIZE = 1000
         EPOCHS = 40000
         G_REGULARIZATION_RATE = 0.0
+        #D_REGULARIZATION_RATE = 0.0
+        #REG_TYPE = 'weight_decay'
+
 
     clean_dir(PICS_DIR)
     if not os.path.exists(PICS_DIR):
@@ -249,6 +256,7 @@ if __name__ == '__main__':
 
     discriminator = DiscriminatorNet()
     generator = GeneratorNet()
+
     d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
     g_optimizer = optim.Adam(generator.parameters(), lr=0.0002)
     loss = nn.BCELoss()
