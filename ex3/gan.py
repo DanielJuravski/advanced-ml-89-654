@@ -106,11 +106,11 @@ class GeneratorNet(torch.nn.Module):
         self.hidden1 = nn.Linear(5, 10)
         self.out = nn.Linear(10, n_out)
         self.f = torch.tanh
-        self.dropout = nn.Dropout(0.0)
+        self.dropout = nn.Dropout(G_REGULARIZATION_RATE)
 
     def forward(self, x):
-        x = self.f(self.hidden0(x))
-        x = self.f(self.hidden1(x))
+        x = self.f(self.dropout(self.hidden0(x)))
+        x = self.f(self.dropout(self.hidden1(x)))
         x = self.f(self.out(x))
 
         return x
@@ -229,10 +229,13 @@ if __name__ == '__main__':
         DATA_TYPE = sys.argv[1]
         BATCH_SIZE = int(sys.argv[2])
         EPOCHS = int(sys.argv[3])
+        G_REGULARIZATION_RATE = float(sys.argv[4])
+
     else:
         DATA_TYPE = 'spiral'
         BATCH_SIZE = 1000
-        EPOCHS = 100000
+        EPOCHS = 40000
+        G_REGULARIZATION_RATE = 0.0
 
     clean_dir(PICS_DIR)
     if not os.path.exists(PICS_DIR):
