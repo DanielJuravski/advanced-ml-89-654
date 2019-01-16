@@ -1,11 +1,16 @@
+import os
+import sys
+from time import gmtime, strftime
+
 import numpy as np
-from matplotlib import pyplot as plt
 import torch
+from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.autograd.variable import Variable
-from time import gmtime, strftime
-import sys
 
+EPOCHS_TILL_PRINT = 1000
+
+PICS_DIR = "./statistics/"
 
 def get_line_data(n):
     # n number of samples to make
@@ -182,17 +187,25 @@ def train_generator(optimizer):
     return error
 
 
-def show_plot(data, batch_size):
+def show_plot(data, batch_size, suffix):
+    out_path = PICS_DIR+"output_"+str(suffix)
     data = data.data.storage().tolist()
     X_hat = np.array([[data[0::2][i]] for i in range(batch_size)])
     Y_hat = np.array([[data[1::2][i]] for i in range(batch_size)])
 
     data_con = np.hstack((X_hat, Y_hat))
-
+    plt.figure()
     plt.plot(data_con[:, 0], data_con[:, 1], '.')
     plt.title('training set')
-    plt.savefig('output')
-    plt.show()
+    plt.savefig(out_path)
+    # plt.show()
+
+def clean_dir(path):
+    import glob
+
+    files = glob.glob(path+"*")
+    for f in files:
+        os.remove(f)
 
 
 def get_real_data(data_type):
@@ -220,10 +233,17 @@ if __name__ == '__main__':
         BATCH_SIZE = 20
         EPOCHS = 40000
 
+    clean_dir(PICS_DIR)
+    if not os.path.exists(PICS_DIR):
+        os.makedirs(PICS_DIR)
+
     sample_data = get_real_data('spiral')
     real_data = Variable(sample_data(500))
-    show_plot(real_data, 500)
+    show_plot(real_data, 500, "target_data")
 
+
+    batch_size = 50
+    line_data = get_line_data(batch_size)
     discriminator = DiscriminatorNet()
     generator = GeneratorNet()
     d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
@@ -243,7 +263,18 @@ if __name__ == '__main__':
                   ' D_err: ' + str(d_error.data.storage().tolist()[0]) +
                   ' G_err: ' + str(g_error.data.storage().tolist()[0]))
 
+
+        if (epoch) % EPOCHS_TILL_PRINT == 0 and epoch > 1:
+            test_noise = get_rand_data(batch_size)
+            fake_data = generator(test_noise)
+            show_plot(fake_data, batch_size, int(epoch/EPOCHS_TILL_PRINT))
+            pass
+
     test_noise = get_rand_data(500)
     fake_data = generator(test_noise)
-    show_plot(fake_data, 500)
+    show_plot(fake_data, 500, "final")
     print("End time: " + strftime("%H:%M:%S", gmtime()))
+
+
+
+
