@@ -40,10 +40,10 @@ def get_parabola_data(n):
     return data_tensor
 
 
-def get_spiral_data(n):
-    n = np.sqrt(np.random.rand(n, 1)) * 780 * (2 * np.pi) / 360
-    x = -np.cos(n) * n + np.random.rand(n, 1)
-    y = np.sin(n) * n + np.random.rand(n, 1)
+def get_spiral_data(n_points):
+    n = np.sqrt(np.random.rand(n_points, 1)) * 780 * (2 * np.pi) / 360
+    x = -np.cos(n) * n + np.random.rand(n_points, 1)
+    y = np.sin(n) * n + np.random.rand(n_points, 1)
 
     x /= x.max()
     y /= y.max()
@@ -135,7 +135,7 @@ def zeros_target(size):
 def train_discriminator(optimizer):
     d_range = 20
     for i in range(d_range):
-        sample_data = get_real_data(DATA_TYPE)
+        sample_data = get_real_data_func(DATA_TYPE)
         real_data = Variable(sample_data(BATCH_SIZE))
         noise = get_rand_data(BATCH_SIZE)
         # Generate fake data and detach (so gradients are not calculated for generator)
@@ -194,10 +194,11 @@ def show_plot(data, batch_size, suffix):
     Y_hat = np.array([[data[1::2][i]] for i in range(batch_size)])
 
     data_con = np.hstack((X_hat, Y_hat))
-    plt.figure()
+    fig = plt.figure()
     plt.plot(data_con[:, 0], data_con[:, 1], '.')
     plt.title('training set')
     plt.savefig(out_path)
+    plt.close(fig)
     # plt.show()
 
 def clean_dir(path):
@@ -208,7 +209,7 @@ def clean_dir(path):
         os.remove(f)
 
 
-def get_real_data(data_type):
+def get_real_data_func(data_type):
     if data_type == 'line':
         real_data_fun = get_line_data
     elif data_type == 'parabola':
@@ -229,21 +230,20 @@ if __name__ == '__main__':
         BATCH_SIZE = int(sys.argv[2])
         EPOCHS = int(sys.argv[3])
     else:
-        DATA_TYPE = 'parabola'
-        BATCH_SIZE = 20
-        EPOCHS = 40000
+        DATA_TYPE = 'spiral'
+        BATCH_SIZE = 1000
+        EPOCHS = 100000
 
     clean_dir(PICS_DIR)
     if not os.path.exists(PICS_DIR):
         os.makedirs(PICS_DIR)
 
-    sample_data = get_real_data('spiral')
-    real_data = Variable(sample_data(500))
-    show_plot(real_data, 500, "target_data")
+    #target data
+    sample_data = get_real_data_func(DATA_TYPE)
+    real_data = Variable(sample_data(BATCH_SIZE))
+    show_plot(real_data, BATCH_SIZE, "target_data")
 
 
-    batch_size = 50
-    line_data = get_line_data(batch_size)
     discriminator = DiscriminatorNet()
     generator = GeneratorNet()
     d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
@@ -265,14 +265,14 @@ if __name__ == '__main__':
 
 
         if (epoch) % EPOCHS_TILL_PRINT == 0 and epoch > 1:
-            test_noise = get_rand_data(batch_size)
+            test_noise = get_rand_data(BATCH_SIZE)
             fake_data = generator(test_noise)
-            show_plot(fake_data, batch_size, int(epoch/EPOCHS_TILL_PRINT))
+            show_plot(fake_data, BATCH_SIZE, int(epoch/EPOCHS_TILL_PRINT))
             pass
 
-    test_noise = get_rand_data(500)
+    test_noise = get_rand_data(BATCH_SIZE)
     fake_data = generator(test_noise)
-    show_plot(fake_data, 500, "final")
+    show_plot(fake_data, BATCH_SIZE, "final")
     print("End time: " + strftime("%H:%M:%S", gmtime()))
 
 
