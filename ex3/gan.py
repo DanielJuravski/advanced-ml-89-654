@@ -36,7 +36,17 @@ def get_parabola_data(n):
 
 
 def get_spiral_data(n):
-    pass
+    n = np.sqrt(np.random.rand(n, 1)) * 780 * (2 * np.pi) / 360
+    x = -np.cos(n) * n + np.random.rand(n, 1)
+    y = np.sin(n) * n + np.random.rand(n, 1)
+
+    x /= x.max()
+    y /= y.max()
+
+    data = np.hstack((x, y))
+    data_tensor = torch.Tensor(data)
+
+    return data_tensor
 
 
 def get_rand_data(n):
@@ -190,7 +200,7 @@ def get_real_data(data_type):
         real_data_fun = get_line_data
     elif data_type == 'parabola':
         real_data_fun = get_parabola_data
-    elif data_type == 'spiral':
+    elif data_type == 'spiral' or data_type == 'spirala':
         real_data_fun = get_spiral_data
     else:
         raise Exception('Wrong data type')
@@ -209,6 +219,10 @@ if __name__ == '__main__':
         DATA_TYPE = 'parabola'
         BATCH_SIZE = 20
         EPOCHS = 40000
+
+    sample_data = get_real_data('spiral')
+    real_data = Variable(sample_data(500))
+    show_plot(real_data, 500)
 
     discriminator = DiscriminatorNet()
     generator = GeneratorNet()
