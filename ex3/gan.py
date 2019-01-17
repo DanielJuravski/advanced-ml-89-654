@@ -9,6 +9,10 @@ from torch import nn, optim
 from torch.autograd.variable import Variable
 import random
 
+FLIP_GENERATOR_BACK_EPOCH = 30000
+
+FLIP_GENERATOR = True
+
 EPOCHS_TILL_PRINT = 1000
 
 # added random value for multiple runs
@@ -104,8 +108,8 @@ class GeneratorNet(torch.nn.Module):
         n_features = 2
         n_out = 2
 
-        self.hidden0 = nn.Linear(n_features, 5)
-        self.hidden1 = nn.Linear(5, 10)
+        self.hidden0 = nn.Linear(n_features, 6)
+        self.hidden1 = nn.Linear(6, 10)
         self.out = nn.Linear(10, n_out)
         self.f = torch.tanh
         self.regularization = nn.Dropout(G_REGULARIZATION_RATE)
@@ -128,7 +132,7 @@ def ones_target(size):
     '''
     Tensor containing ones, with shape = size
     '''
-    data = Variable(torch.ones(size, 2))
+    data = Variable(torch.ones(size, 2)) -0.01
     return data
 
 
@@ -136,7 +140,7 @@ def zeros_target(size):
     '''
     Tensor containing zeros, with shape = size
     '''
-    data = Variable(torch.zeros(size, 2))
+    data = Variable(torch.zeros(size, 2)) + 0.01
     return data
 
 
@@ -176,16 +180,19 @@ def train_generator(optimizer):
     g_range = 1
     for i in range(g_range):
         noise = get_rand_data(BATCH_SIZE)
-        fake_data = generator(noise)
+
 
         # Reset gradients
         optimizer.zero_grad()
 
+        fake_data = generator(noise)
         # Sample noise and generate fake data
         prediction = discriminator(fake_data)
 
         # Calculate error and backpropagate
-        error = loss(prediction, ones_target(BATCH_SIZE))
+        target = ones_target(BATCH_SIZE) if not FLIP_GENERATOR else zeros_target(BATCH_SIZE)
+        factor = 1 if not FLIP_GENERATOR else -1
+        error = loss(prediction, target) * factor
         error.backward()
 
         # Update weights with gradients
@@ -243,12 +250,12 @@ if __name__ == '__main__':
         REG_TYPE = sys.argv[6]
 
     else:
-        DATA_TYPE = 'parabola'
-        BATCH_SIZE = 500
-        EPOCHS = 40000
-        G_REGULARIZATION_RATE = 0.0
+        DATA_TYPE = 'spiral'
+        BATCH_SIZE = 2000
+        EPOCHS = 100000
+        G_REGULARIZATION_RATE = 0.3
         D_REGULARIZATION_RATE = 0.0
-        REG_TYPE = 'weight_decay'
+        REG_TYPE = 'none'
 
     BATCH_SIZE_TARGET = 1000
 
@@ -273,6 +280,12 @@ if __name__ == '__main__':
     loss = nn.BCELoss()
 
     for epoch in range(EPOCHS):
+        if epoch > 70000:
+            FLIP_GENERATOR = False
+        elif (epoch-1) > FLIP_GENERATOR_BACK_EPOCH:
+            if epoch % 10000 == 0:
+                FLIP_GENERATOR = not FLIP_GENERATOR
+
         # Train Discriminator
         d_error, d_pred_real, d_pred_fake = train_discriminator(d_optimizer)
 
@@ -287,9 +300,9 @@ if __name__ == '__main__':
 
 
         if (epoch) % EPOCHS_TILL_PRINT == 0 and epoch > 1:
-            test_noise = get_rand_data(BATCH_SIZE)
+            test_noise = get_rand_data(1000)
             fake_data = generator(test_noise)
-            show_plot(fake_data, BATCH_SIZE, int(epoch/EPOCHS_TILL_PRINT))
+            show_plot(fake_data, 1000, int(epoch/EPOCHS_TILL_PRINT))
             pass
 
     # plot final plot
