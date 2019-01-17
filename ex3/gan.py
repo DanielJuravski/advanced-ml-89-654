@@ -7,10 +7,12 @@ import torch
 from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.autograd.variable import Variable
+import random
 
 EPOCHS_TILL_PRINT = 1000
 
-PICS_DIR = "./statistics/"
+# added random value for multiple runs
+PICS_DIR = "./statistics_" + str(random.random()) + "/"
 
 def get_line_data(n):
     # n number of samples to make
@@ -110,9 +112,14 @@ class GeneratorNet(torch.nn.Module):
 
 
     def forward(self, x):
-        x = self.f(self.regularization(self.hidden0(x)))
-        x = self.f(self.regularization(self.hidden1(x)))
-        x = self.f(self.out(x))
+        if REG_TYPE == 'dropout':
+            x = self.f(self.regularization(self.hidden0(x)))
+            x = self.f(self.regularization(self.hidden1(x)))
+            x = self.f(self.out(x))
+        else:
+            x = self.f(self.hidden0(x))
+            x = self.f(self.hidden1(x))
+            x = self.f(self.out(x))
 
         return x
 
@@ -197,10 +204,11 @@ def show_plot(data, batch_size, suffix):
     data_con = np.hstack((X_hat, Y_hat))
     fig = plt.figure()
     plt.plot(data_con[:, 0], data_con[:, 1], '.')
-    plt.title('training set')
+    #plt.title('training set')
     plt.savefig(out_path)
     plt.close(fig)
     # plt.show()
+
 
 def clean_dir(path):
     import glob
@@ -226,23 +234,23 @@ def get_real_data_func(data_type):
 if __name__ == '__main__':
     print("Start time: " + strftime("%H:%M:%S", gmtime()))
 
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 5:
         DATA_TYPE = sys.argv[1]
         BATCH_SIZE = int(sys.argv[2])
         EPOCHS = int(sys.argv[3])
         G_REGULARIZATION_RATE = float(sys.argv[4])
-        #D_REGULARIZATION_RATE = float(sys.argv[5])
-        #REG_TYPE = sys.argv[6]
-
+        D_REGULARIZATION_RATE = float(sys.argv[5])
+        REG_TYPE = sys.argv[6]
 
     else:
         DATA_TYPE = 'parabola'
-        BATCH_SIZE = 1000
+        BATCH_SIZE = 500
         EPOCHS = 40000
         G_REGULARIZATION_RATE = 0.0
-        #D_REGULARIZATION_RATE = 0.0
-        #REG_TYPE = 'weight_decay'
+        D_REGULARIZATION_RATE = 0.0
+        REG_TYPE = 'weight_decay'
 
+    BATCH_SIZE_TARGET = 1000
 
     clean_dir(PICS_DIR)
     if not os.path.exists(PICS_DIR):
@@ -253,12 +261,15 @@ if __name__ == '__main__':
     real_data = Variable(sample_data(BATCH_SIZE))
     show_plot(real_data, BATCH_SIZE, "target_data")
 
-
     discriminator = DiscriminatorNet()
     generator = GeneratorNet()
 
-    d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
-    g_optimizer = optim.Adam(generator.parameters(), lr=0.0002)
+    if REG_TYPE == 'weight_decay':
+        d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, weight_decay=D_REGULARIZATION_RATE)
+        g_optimizer = optim.Adam(generator.parameters(), lr=0.0002, weight_decay=G_REGULARIZATION_RATE)
+    else:
+        d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
+        g_optimizer = optim.Adam(generator.parameters(), lr=0.0002)
     loss = nn.BCELoss()
 
     for epoch in range(EPOCHS):
@@ -281,11 +292,20 @@ if __name__ == '__main__':
             show_plot(fake_data, BATCH_SIZE, int(epoch/EPOCHS_TILL_PRINT))
             pass
 
-    test_noise = get_rand_data(BATCH_SIZE)
+    # plot final plot
+    test_noise = get_rand_data(BATCH_SIZE_TARGET)
     fake_data = generator(test_noise)
-    show_plot(fake_data, BATCH_SIZE, "final")
+    show_plot(fake_data, BATCH_SIZE_TARGET, "final")
+    # write parameters tunings
+    with open(PICS_DIR + 'params.txt', 'w') as f:
+        f.write("data type: %s\n"
+                "batch size: %f\n"
+                "epochs: %f\n"
+                "g reg rate: %f\n"
+                "d reg rate: %f\n"
+                "reg type: %s\n"
+                % (DATA_TYPE, BATCH_SIZE, EPOCHS, G_REGULARIZATION_RATE, D_REGULARIZATION_RATE, REG_TYPE))
     print("End time: " + strftime("%H:%M:%S", gmtime()))
-
 
 
 
