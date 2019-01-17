@@ -1,6 +1,6 @@
 import os
 import sys
-from time import gmtime, strftime
+from time import gmtime, strftime, time
 
 import numpy as np
 import torch
@@ -12,7 +12,7 @@ import random
 EPOCHS_TILL_PRINT = 1000
 
 # added random value for multiple runs
-PICS_DIR = "./statistics_" + str(random.random()) + "/"
+PICS_DIR = "./statistics_" + str(time()) + "/"
 
 def get_line_data(n):
     # n number of samples to make
