@@ -9,7 +9,7 @@ from torch import nn, optim
 from torch.autograd.variable import Variable
 import random
 
-FLIP_GENERATOR_BACK_EPOCH = 30000
+FLIP_GENERATOR_BACK_EPOCH = 10000
 
 FLIP_GENERATOR = True
 
@@ -280,11 +280,9 @@ if __name__ == '__main__':
     loss = nn.BCELoss()
 
     for epoch in range(EPOCHS):
-        if epoch > 70000:
-            FLIP_GENERATOR = False
-        elif (epoch-1) > FLIP_GENERATOR_BACK_EPOCH:
-            if epoch % 10000 == 0:
-                FLIP_GENERATOR = not FLIP_GENERATOR
+
+        if (epoch+1) % FLIP_GENERATOR_BACK_EPOCH == 0:
+            FLIP_GENERATOR = not FLIP_GENERATOR
 
         # Train Discriminator
         d_error, d_pred_real, d_pred_fake = train_discriminator(d_optimizer)
