@@ -4,19 +4,26 @@ from time import gmtime, strftime, time
 
 import numpy as np
 import torch
+
 from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.autograd.variable import Variable
 import random
+torch.manual_seed(66)
+np.random.seed(66)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 FLIP_GENERATOR_BACK_EPOCH = 10000
-
 FLIP_GENERATOR = True
-
 EPOCHS_TILL_PRINT = 1000
+EPS = 0.01
 
 # added random value for multiple runs
-PICS_DIR = "./statistics_" + str(time()) + "/"
+prefix = ""
+if torch.cuda.is_available():
+    prefix = "drive/'My Drive'/colab/"
+
+PICS_DIR = prefix +"./statistics_" + str(time()) + "/"
 
 def get_line_data(n):
     # n number of samples to make
@@ -57,7 +64,7 @@ def get_spiral_data(n_points):
     data = np.hstack((x, y))
     data_tensor = torch.Tensor(data)
 
-    return data_tensor
+    return data_tensor.to(device)
 
 
 def get_rand_data(n):
@@ -73,7 +80,7 @@ def get_rand_data(n):
     data = np.hstack((x, y))
     data_tensor = Variable(torch.Tensor(data))
 
-    return data_tensor
+    return data_tensor.to(device)
 
 
 class DiscriminatorNet(torch.nn.Module):
@@ -85,16 +92,32 @@ class DiscriminatorNet(torch.nn.Module):
         n_features = 2
         n_out = 2
 
-        self.hidden0 = nn.Linear(n_features, 5)
-        self.hidden1 = nn.Linear(5, 10)
-        self.out = nn.Linear(10, n_out)
-        self.f = torch.sigmoid
+        self.hidden0 = nn.Linear(n_features, 10)
+        self.bn1 = nn.BatchNorm1d(num_features=10)
+        self.hidden1 = nn.Linear(10,20)
+        self.bn2 = nn.BatchNorm1d(num_features=20)
+        self.hidden2 = nn.Linear(20,20)
+        self.out = nn.Linear(20, n_out)
+        self.regularization = nn.Dropout(D_REGULARIZATION_RATE)
+        self.f1 = get_activation_func(D_ACTIVATION_FUNC_1)
+        self.f2 = get_activation_func(D_ACTIVATION_FUNC_2)
 
 
     def forward(self, x):
-        x = self.f(self.hidden0(x))
-        x = self.f(self.hidden1(x))
-        x = self.f(self.out(x))
+
+        if REG_TYPE == 'dropout_d':
+            x = self.f1(self.regularization(self.hidden0(x)))
+            # x = self.bn1(x)
+            x = self.f2(self.hidden1(x))
+            # x = self.bn2(x)
+            x = self.f2(self.out(x))
+        else:
+            x = self.f1(self.hidden0(x))
+            # x = self.bn1(x)
+            x = self.f2(self.hidden1(x))
+            # x = self.bn2(x)
+            x = self.f2(self.hidden2(x))
+            x = self.f2(self.out(x))
 
         return x
 
@@ -108,22 +131,33 @@ class GeneratorNet(torch.nn.Module):
         n_features = 2
         n_out = 2
 
-        self.hidden0 = nn.Linear(n_features, 6)
-        self.hidden1 = nn.Linear(6, 10)
-        self.out = nn.Linear(10, n_out)
-        self.f = torch.tanh
+        self.hidden0 = nn.Linear(n_features, 10)
+        self.bn1 = nn.BatchNorm1d(num_features=10)
+        self.hidden1 = nn.Linear(10, 20)
+        self.bn2 = nn.BatchNorm1d(num_features=20)
+        self.hidden2 = nn.Linear(20,20)
+        self.out = nn.Linear(20, n_out)
+        self.f1 = get_activation_func(G_ACTIVATION_FUNC_1)
+        self.f2 = get_activation_func(G_ACTIVATION_FUNC_2)
+        self.f3 = get_activation_func(G_ACTIVATION_FUNC_3)
         self.regularization = nn.Dropout(G_REGULARIZATION_RATE)
 
 
     def forward(self, x):
         if REG_TYPE == 'dropout':
-            x = self.f(self.regularization(self.hidden0(x)))
-            x = self.f(self.regularization(self.hidden1(x)))
-            x = self.f(self.out(x))
+            x = self.f1(self.regularization(self.hidden0(x)))
+            # x = self.bn1(x)
+            x = self.f2(self.regularization(self.hidden1(x)))
+            # x = self.bn2(x)
+            x = self.f2(self.regularization(self.hidden2(x)))
+            x = self.f2(self.out(x))
         else:
-            x = self.f(self.hidden0(x))
-            x = self.f(self.hidden1(x))
-            x = self.f(self.out(x))
+            x = self.f1(self.hidden0(x))
+            # x = self.bn1(x)
+            x = self.f2(self.hidden1(x))
+            # x = self.bn2(x)
+            x = self.f2(self.hidden2(x))
+            x = self.f3(self.out(x))
 
         return x
 
@@ -132,7 +166,10 @@ def ones_target(size):
     '''
     Tensor containing ones, with shape = size
     '''
-    data = Variable(torch.ones(size, 2)) -0.01
+    eps = EPS
+    if EPS == "dynamic":
+        eps = (random.random() * 0.5) - 0.2
+    data = Variable(torch.ones(size, 2).to(device)) - eps
     return data
 
 
@@ -140,7 +177,10 @@ def zeros_target(size):
     '''
     Tensor containing zeros, with shape = size
     '''
-    data = Variable(torch.zeros(size, 2)) + 0.01
+    eps = EPS
+    if EPS == "dynamic":
+        eps = (random.random() * 0.2)
+    data = Variable(torch.zeros(size, 2).to(device)) + eps
     return data
 
 
@@ -176,11 +216,11 @@ def train_discriminator(optimizer):
 
 
 def train_generator(optimizer):
+    global FLIP_GENERATOR
     # range beyond 1 works bad
     g_range = 1
     for i in range(g_range):
         noise = get_rand_data(BATCH_SIZE)
-
 
         # Reset gradients
         optimizer.zero_grad()
@@ -192,14 +232,27 @@ def train_generator(optimizer):
         # Calculate error and backpropagate
         target = ones_target(BATCH_SIZE) if not FLIP_GENERATOR else zeros_target(BATCH_SIZE)
         factor = 1 if not FLIP_GENERATOR else -1
-        error = loss(prediction, target) * factor
-        error.backward()
+        error1 = loss(prediction, target) * factor
+
+        error1.backward(retain_graph=True)
+
+        # Update weights with gradients
+        #optimizer.step()
+
+        #2step
+        # Calculate error and backpropagate
+        FLIP_GENERATOR = not FLIP_GENERATOR
+        target = ones_target(BATCH_SIZE) if not FLIP_GENERATOR else zeros_target(BATCH_SIZE)
+        factor = 1 if not FLIP_GENERATOR else -1
+        error2 = loss(prediction, target) * factor
+        error2.backward()
 
         # Update weights with gradients
         optimizer.step()
+        FLIP_GENERATOR = not FLIP_GENERATOR
 
     # Return error
-    return error
+    return (error1 + error2)
 
 
 def show_plot(data, batch_size, suffix):
@@ -237,6 +290,48 @@ def get_real_data_func(data_type):
 
     return real_data_fun
 
+def get_activation_func(f_name):
+    if f_name == "sigmoid":
+        return torch.nn.Sigmoid()
+    elif f_name == "tanh":
+        return torch.nn.Tanh()
+    elif f_name == "relu":
+        return torch.nn.ReLU()
+    elif f_name == "leaky_relu":
+        return torch.nn.LeakyReLU()
+    elif f_name == "soft_sign":
+        return torch.nn.Softsign()
+    elif f_name == "celu":
+        return torch.nn.CELU()
+    elif f_name == "tanh_shrink":
+        return torch.nn.Tanhshrink()
+
+
+
+def print_params():
+    with open(PICS_DIR + 'params.txt', 'w') as f:
+        f.write("data type: %s\n"
+                "batch size: %f\n"
+                "epochs: %f\n"
+                "g reg rate: %f\n"
+                "d reg rate: %f\n"
+                "reg type: %s\n"
+                "g activation_1 %s\n"
+                "g activation_2 %s\n"
+                "g activation 3 %s\n"
+                "d activation_1 %s\n"
+                "d activation_2 %s\n"
+                "d lr %f\n"
+                "g lr %f\n"
+                "2step on G\n"
+                "Epsilon %s\n"
+                "raised neurons to 10 20\n"
+                "dropout d on h1\n"
+                "added layer to d and g\n"
+                # "added bn on 2 layers"
+                % (DATA_TYPE, BATCH_SIZE, EPOCHS, G_REGULARIZATION_RATE, D_REGULARIZATION_RATE, REG_TYPE,
+                   G_ACTIVATION_FUNC_1, G_ACTIVATION_FUNC_2, G_ACTIVATION_FUNC_3, D_ACTIVATION_FUNC_1, D_ACTIVATION_FUNC_2, D_LR, G_LR, str(EPS)))
+
 
 if __name__ == '__main__':
     print("Start time: " + strftime("%H:%M:%S", gmtime()))
@@ -251,12 +346,19 @@ if __name__ == '__main__':
 
     else:
         DATA_TYPE = 'spiral'
-        BATCH_SIZE = 2000
+        BATCH_SIZE = 1000
         EPOCHS = 100000
-        G_REGULARIZATION_RATE = 0.3
-        D_REGULARIZATION_RATE = 0.0
+        G_REGULARIZATION_RATE = 0.35
+        D_REGULARIZATION_RATE = 0.3
         REG_TYPE = 'none'
 
+    D_ACTIVATION_FUNC_1 = "sigmoid"
+    D_ACTIVATION_FUNC_2 = "sigmoid"
+    G_ACTIVATION_FUNC_1 = "celu"
+    G_ACTIVATION_FUNC_2 = "tanh"
+    G_ACTIVATION_FUNC_3 = "tanh_shrink"
+    G_LR = 0.0005
+    D_LR = 0.003
     BATCH_SIZE_TARGET = 1000
 
     clean_dir(PICS_DIR)
@@ -268,17 +370,18 @@ if __name__ == '__main__':
     real_data = Variable(sample_data(BATCH_SIZE))
     show_plot(real_data, BATCH_SIZE, "target_data")
 
-    discriminator = DiscriminatorNet()
-    generator = GeneratorNet()
+    discriminator = DiscriminatorNet().to(device)
+    generator = GeneratorNet().to(device)
 
     if REG_TYPE == 'weight_decay':
-        d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, weight_decay=D_REGULARIZATION_RATE)
-        g_optimizer = optim.Adam(generator.parameters(), lr=0.0002, weight_decay=G_REGULARIZATION_RATE)
+        d_optimizer = optim.Adam(discriminator.parameters(), lr=D_LR, weight_decay=D_REGULARIZATION_RATE)
+        g_optimizer = optim.Adam(generator.parameters(), lr=G_LR, weight_decay=G_REGULARIZATION_RATE)
     else:
-        d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
-        g_optimizer = optim.Adam(generator.parameters(), lr=0.0002)
+        d_optimizer = optim.Adam(discriminator.parameters(), lr=D_LR)
+        g_optimizer = optim.Adam(generator.parameters(), lr=G_LR)
     loss = nn.BCELoss()
 
+    print_params()
     for epoch in range(EPOCHS):
 
         if (epoch+1) % FLIP_GENERATOR_BACK_EPOCH == 0:
@@ -308,14 +411,6 @@ if __name__ == '__main__':
     fake_data = generator(test_noise)
     show_plot(fake_data, BATCH_SIZE_TARGET, "final")
     # write parameters tunings
-    with open(PICS_DIR + 'params.txt', 'w') as f:
-        f.write("data type: %s\n"
-                "batch size: %f\n"
-                "epochs: %f\n"
-                "g reg rate: %f\n"
-                "d reg rate: %f\n"
-                "reg type: %s\n"
-                % (DATA_TYPE, BATCH_SIZE, EPOCHS, G_REGULARIZATION_RATE, D_REGULARIZATION_RATE, REG_TYPE))
     print("End time: " + strftime("%H:%M:%S", gmtime()))
 
 
