@@ -87,34 +87,28 @@ class DiscriminatorNet(torch.nn.Module):
     def __init__(self):
         super(DiscriminatorNet, self).__init__()
         n_features = 2
-        n_out = 1
+        n_out = 2
 
         self.hidden0 = nn.Linear(n_features, DL1_SIZE)
-        nn.init.normal_(self.hidden0.weight.data, mean=0.0, std=0.02)
         self.hidden1 = nn.Linear(DL1_SIZE, DL2_SIZE)
-        nn.init.normal_(self.hidden1.weight.data, mean=0.0, std=0.02)
         self.hidden2 = nn.Linear(DL2_SIZE, DL3_SIZE)
-        nn.init.normal_(self.hidden2.weight.data, mean=0.0, std=0.02)
-        self.out = nn.Linear(DL3_SIZE, n_out)
-        nn.init.normal_(self.out.weight.data, mean=0.0, std=0.02)
-        self.dropout = nn.Dropout(D_REGULARIZATION_RATE)
-        self.bn1 = nn.BatchNorm1d(DL1_SIZE)
-        self.bn2 = nn.BatchNorm1d(DL2_SIZE)
-        self.bn3 = nn.BatchNorm1d(DL3_SIZE)
+        self.out = nn.Linear(DL2_SIZE, n_out)
+        # self.regularization = nn.Dropout(D_REGULARIZATION_RATE)
         self.f1 = get_activation_func(D_ACTIVATION_FUNC_1)
         self.f2 = get_activation_func(D_ACTIVATION_FUNC_2)
 
 
     def forward(self, x):
-        if REG_TYPE == 'dropout':
-            x = self.dropout(self.f1(self.bn1(self.hidden0(x))))
-            x = self.dropout(self.f1(self.bn2(self.hidden1(x))))
-            x = self.dropout(self.f1(self.bn3(self.hidden2(x))))
+
+        if REG_TYPE == 'dropout_d':
+            x = self.f1(self.regularization(self.hidden0(x)))
+            x = self.f2(self.hidden1(x))
             x = self.f2(self.out(x))
         else:
-            x = self.bn1(self.f1(self.hidden0(x)))
-            x = self.bn2(self.f1(self.hidden1(x)))
-            x = self.bn3(self.f1(self.hidden2(x)))
+            x = self.f1(self.hidden0(x))
+            x = self.f2(self.hidden1(x))
+            if DL3_SIZE > 0:
+                x = self.f2(self.hidden2(x))
             x = self.f2(self.out(x))
 
         return x
@@ -130,62 +124,57 @@ class GeneratorNet(torch.nn.Module):
         n_out = 2
 
         self.hidden0 = nn.Linear(n_features, GL1_SIZE)
-        nn.init.normal_(self.hidden0.weight.data, mean=0.0, std=0.02)
         self.hidden1 = nn.Linear(GL1_SIZE, GL2_SIZE)
-        nn.init.normal_(self.hidden1.weight.data, mean=0.0, std=0.02)
         self.hidden2 = nn.Linear(GL2_SIZE, GL3_SIZE)
-        nn.init.normal_(self.hidden2.weight.data, mean=0.0, std=0.02)
-        self.bn1 = nn.BatchNorm1d(GL1_SIZE)
-        self.bn2 = nn.BatchNorm1d(GL2_SIZE)
-        self.bn3 = nn.BatchNorm1d(GL3_SIZE)
         self.out = nn.Linear(GL3_SIZE, n_out)
-        nn.init.normal_(self.out.weight.data, mean=0.0, std=0.02)
         self.f1 = get_activation_func(G_ACTIVATION_FUNC_1)
         self.f2 = get_activation_func(G_ACTIVATION_FUNC_2)
         self.f3 = get_activation_func(G_ACTIVATION_FUNC_3)
-        self.dropout = nn.Dropout(G_REGULARIZATION_RATE)
-
+        # self.regularization = nn.Dropout(G_REGULARIZATION_RATE)
 
 
     def forward(self, x):
         if REG_TYPE == 'dropout':
-            x = self.dropout(self.f1(self.bn1(self.hidden0(x))))
-            x = self.dropout(self.f1(self.bn2(self.hidden1(x))))
-            x = self.dropout(self.f1(self.bn3(self.hidden2(x))))
-            x = self.out(x)
+            x = self.f1(self.regularization(self.hidden0(x)))
+            # x = self.bn1(x)
+            x = self.f2(self.regularization(self.hidden1(x)))
+            # x = self.bn2(x)
+            x = self.f2(self.regularization(self.hidden2(x)))
+            x = self.f2(self.out(x))
         else:
             x = self.f1(self.hidden0(x))
-            x = self.f1(self.hidden1(x))
-            x = self.f1(self.hidden2(x))
-            x = self.out(x)
+            x = self.f2(self.hidden1(x))
+            if GL3_SIZE > 0:
+                x = self.f2(self.hidden2(x))
+            x = self.f3(self.out(x))
 
         return x
 
 
-def ones_target(size, axs=2):
+def ones_target(size):
     '''
     Tensor containing ones, with shape = size
     '''
     eps = EPS
     if EPS == "dynamic":
         eps = (random.random() * 0.5) - 0.2
-    data = Variable(torch.ones(size, axs))
-    return torch.full((size,), 1)
+    data = Variable(torch.ones(size, 2)) - eps
+    return data
 
 
-def zeros_target(size, axs=2):
+def zeros_target(size):
     '''
     Tensor containing zeros, with shape = size
     '''
     eps = EPS
     if EPS == "dynamic":
         eps = (random.random() * 0.2)
-    data = Variable(torch.zeros(size, axs))
-    return torch.full((size, ), 0)
+    data = Variable(torch.zeros(size, 2)) + eps
+    return data
 
 
 def train_discriminator(optimizer):
-    d_range = 1
+    d_range = 20
     for i in range(d_range):
         # Reset gradients
         optimizer.zero_grad()
@@ -201,13 +190,13 @@ def train_discriminator(optimizer):
         # 1.1 Train on Real Data
         prediction_real = discriminator(real_data)
         # Calculate error and backpropagate
-        error_real = loss(prediction_real.view(-1), ones_target(BATCH_SIZE, 1))
+        error_real = loss(prediction_real, ones_target(BATCH_SIZE))
         error_real.backward()
 
         # 1.2 Train on Fake Data
         prediction_fake = discriminator(fake_data)
         # Calculate error and backpropagate
-        error_fake = loss(prediction_fake.view(-1), zeros_target(BATCH_SIZE, 1))
+        error_fake = loss(prediction_fake, zeros_target(BATCH_SIZE))
         error_fake.backward()
 
         # 1.3 Update weights with gradients
@@ -239,7 +228,7 @@ def train_generator(optimizer):
             error2.backward(retain_graph=True)
 
         target1 = ones_target(BATCH_SIZE)
-        error1 = loss(prediction.view(-1), target1)
+        error1 = loss(prediction, target1)
         error1.backward()
 
         # Update weights with gradients
@@ -290,7 +279,7 @@ def get_activation_func(f_name):
     elif f_name == "tanh":
         return torch.nn.Tanh()
     elif f_name == "relu":
-        return torch.nn.ReLU(True)
+        return torch.nn.ReLU()
     elif f_name == "leaky_relu":
         return torch.nn.LeakyReLU()
     elif f_name == "soft_sign":
@@ -335,72 +324,70 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         DATA_TYPE = sys.argv[1]
     else:
-        DATA_TYPE = 'spiral'
+        DATA_TYPE = 'parabola'
 
-    G_REGULARIZATION_RATE = 0
-    D_REGULARIZATION_RATE = 0
+    G_REGULARIZATION_RATE = 0.35
+    D_REGULARIZATION_RATE = 0.3
     BATCH_SIZE_TARGET = 1000
 
     if DATA_TYPE != 'spiral':
         FLIP_GENERATOR = False
 
     if DATA_TYPE == "line":
-        DL1_SIZE = 20
-        DL2_SIZE = 30
-        DL3_SIZE = 20
-        GL1_SIZE = 20
-        GL2_SIZE = 30
-        GL3_SIZE = 20
+        DL1_SIZE = 10
+        DL2_SIZE = 20
+        GL1_SIZE = 10
+        GL2_SIZE = 20
         FLIP_GENERATOR = False
-        D_ACTIVATION_FUNC_1 = "relu"
+        D_ACTIVATION_FUNC_1 = "sigmoid"
         D_ACTIVATION_FUNC_2 = "sigmoid"
-        G_ACTIVATION_FUNC_1 = "relu"
+        G_ACTIVATION_FUNC_1 = "celu"
         G_ACTIVATION_FUNC_2 = "tanh"
         G_ACTIVATION_FUNC_3 = "tanh_shrink"
-        REG_TYPE = 'dropout'
+        REG_TYPE = 'none'
         G_LR = 0.0003
-        D_LR = 0.0001
-        BATCH_SIZE = 1000
+        D_LR = 0.0003
+        BATCH_SIZE = 100
         EPOCHS = 40 * 1000
         EPS = 0.01
     elif DATA_TYPE == "parabola":
-        DL1_SIZE = 20
-        DL2_SIZE = 30
-        DL3_SIZE = 20
-        GL1_SIZE = 20
-        GL2_SIZE = 30
-        GL3_SIZE = 20
+        DL1_SIZE = 5
+        DL2_SIZE = 5
+        DL3_SIZE = 0
+        GL1_SIZE = 5
+        GL2_SIZE = 5
+        GL3_SIZE = 0
         FLIP_GENERATOR = False
-        D_ACTIVATION_FUNC_1 = "relu"
+        D_ACTIVATION_FUNC_1 = "sigmoid"
         D_ACTIVATION_FUNC_2 = "sigmoid"
-        G_ACTIVATION_FUNC_1 = "relu"
+        G_ACTIVATION_FUNC_1 = "tanh"
         G_ACTIVATION_FUNC_2 = "tanh"
-        G_ACTIVATION_FUNC_3 = "tanh_shrink"
-        REG_TYPE = 'dropout'
-        G_LR = 0.0003
-        D_LR = 0.0001
-        BATCH_SIZE = 1000
+        G_ACTIVATION_FUNC_3 = "tanh"
+        REG_TYPE = 'none'
+        G_LR = 0.0002
+        D_LR = 0.0002
+        BATCH_SIZE = 100
         EPOCHS = 80 * 1000
         EPS = 0
     elif DATA_TYPE == 'spiral':
-        DL1_SIZE = 20
-        DL2_SIZE = 30
+        DL1_SIZE = 10
+        DL2_SIZE = 20
         DL3_SIZE = 20
-        GL1_SIZE = 20
-        GL2_SIZE = 30
+        GL1_SIZE = 10
+        GL2_SIZE = 20
         GL3_SIZE = 20
-        FLIP_GENERATOR = False
-        D_ACTIVATION_FUNC_1 = "relu"
+        FLIP_GENERATOR = True
+        D_ACTIVATION_FUNC_1 = "sigmoid"
         D_ACTIVATION_FUNC_2 = "sigmoid"
-        G_ACTIVATION_FUNC_1 = "relu"
+        G_ACTIVATION_FUNC_1 = "celu"
         G_ACTIVATION_FUNC_2 = "tanh"
         G_ACTIVATION_FUNC_3 = "tanh_shrink"
-        REG_TYPE = 'dropout'
-        G_LR = 0.0003
-        D_LR = 0.0001
+        REG_TYPE = 'none'
+        G_LR = 0.0005
+        D_LR = 0.003
         BATCH_SIZE = 1000
         EPOCHS =100 * 1000
-        EPS = 0
+        EPS = 0.01
 
     clean_dir(PICS_DIR)
     if not os.path.exists(PICS_DIR):
@@ -418,13 +405,11 @@ if __name__ == '__main__':
         d_optimizer = optim.Adam(discriminator.parameters(), lr=D_LR, weight_decay=D_REGULARIZATION_RATE)
         g_optimizer = optim.Adam(generator.parameters(), lr=G_LR, weight_decay=G_REGULARIZATION_RATE)
     else:
-        d_optimizer = optim.Adam(discriminator.parameters(), lr=D_LR, betas=(0.5, 0.999))
-        g_optimizer = optim.Adam(generator.parameters(), lr=G_LR, betas=(0.5, 0.999))
+        d_optimizer = optim.Adam(discriminator.parameters(), lr=D_LR)
+        g_optimizer = optim.Adam(generator.parameters(), lr=G_LR)
     loss = nn.BCELoss()
 
     print_params()
-    generator.train()
-    discriminator.train()
     for epoch in range(EPOCHS):
 
         # Train Discriminator
@@ -447,8 +432,6 @@ if __name__ == '__main__':
             pass
 
     # plot final plot
-    generator.eval()
-    discriminator.eval()
     test_noise = get_rand_data(BATCH_SIZE_TARGET)
     fake_data = generator(test_noise)
     show_plot(fake_data, BATCH_SIZE_TARGET, "final")
