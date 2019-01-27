@@ -1,0 +1,21 @@
+======================
+Python version 3.6
+
+required packages:
+os
+sys
+time
+random
+
+numpy
+pytorch
+======================
+Running the program
+run:
+
+python gan.py <desired_disturbuation>
+
+where desired_disturbation is one of the below:
+line
+parabola
+spiral
