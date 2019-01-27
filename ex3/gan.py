@@ -9,9 +9,8 @@ from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.autograd.variable import Variable
 import random
-torch.manual_seed(66)
+torch.manual_seed(6)
 np.random.seed(66)
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 FLIP_GENERATOR_BACK_EPOCH = 10000
 FLIP_GENERATOR = True
@@ -20,8 +19,6 @@ EPS = 0.01
 
 # added random value for multiple runs
 prefix = ""
-if torch.cuda.is_available():
-    prefix = "drive/'My Drive'/colab/"
 
 PICS_DIR = prefix +"./statistics_" + str(time()) + "/"
 
@@ -64,7 +61,7 @@ def get_spiral_data(n_points):
     data = np.hstack((x, y))
     data_tensor = torch.Tensor(data)
 
-    return data_tensor.to(device)
+    return data_tensor
 
 
 def get_rand_data(n):
@@ -80,7 +77,7 @@ def get_rand_data(n):
     data = np.hstack((x, y))
     data_tensor = Variable(torch.Tensor(data))
 
-    return data_tensor.to(device)
+    return data_tensor
 
 
 class DiscriminatorNet(torch.nn.Module):
@@ -92,13 +89,11 @@ class DiscriminatorNet(torch.nn.Module):
         n_features = 2
         n_out = 2
 
-        self.hidden0 = nn.Linear(n_features, 10)
-        self.bn1 = nn.BatchNorm1d(num_features=10)
-        self.hidden1 = nn.Linear(10,20)
-        self.bn2 = nn.BatchNorm1d(num_features=20)
-        self.hidden2 = nn.Linear(20,20)
-        self.out = nn.Linear(20, n_out)
-        self.regularization = nn.Dropout(D_REGULARIZATION_RATE)
+        self.hidden0 = nn.Linear(n_features, 5)
+        self.hidden1 = nn.Linear(5,10)
+        # self.hidden2 = nn.Linear(6,12)
+        self.out = nn.Linear(10, n_out)
+        # self.regularization = nn.Dropout(D_REGULARIZATION_RATE)
         self.f1 = get_activation_func(D_ACTIVATION_FUNC_1)
         self.f2 = get_activation_func(D_ACTIVATION_FUNC_2)
 
@@ -107,16 +102,11 @@ class DiscriminatorNet(torch.nn.Module):
 
         if REG_TYPE == 'dropout_d':
             x = self.f1(self.regularization(self.hidden0(x)))
-            # x = self.bn1(x)
             x = self.f2(self.hidden1(x))
-            # x = self.bn2(x)
             x = self.f2(self.out(x))
         else:
             x = self.f1(self.hidden0(x))
-            # x = self.bn1(x)
             x = self.f2(self.hidden1(x))
-            # x = self.bn2(x)
-            x = self.f2(self.hidden2(x))
             x = self.f2(self.out(x))
 
         return x
@@ -131,16 +121,14 @@ class GeneratorNet(torch.nn.Module):
         n_features = 2
         n_out = 2
 
-        self.hidden0 = nn.Linear(n_features, 10)
-        self.bn1 = nn.BatchNorm1d(num_features=10)
-        self.hidden1 = nn.Linear(10, 20)
-        self.bn2 = nn.BatchNorm1d(num_features=20)
-        self.hidden2 = nn.Linear(20,20)
-        self.out = nn.Linear(20, n_out)
+        self.hidden0 = nn.Linear(n_features, 5)
+        self.hidden1 = nn.Linear(5, 10)
+        # self.hidden2 = nn.Linear(20,20)
+        self.out = nn.Linear(10, n_out)
         self.f1 = get_activation_func(G_ACTIVATION_FUNC_1)
         self.f2 = get_activation_func(G_ACTIVATION_FUNC_2)
         self.f3 = get_activation_func(G_ACTIVATION_FUNC_3)
-        self.regularization = nn.Dropout(G_REGULARIZATION_RATE)
+        # self.regularization = nn.Dropout(G_REGULARIZATION_RATE)
 
 
     def forward(self, x):
@@ -153,11 +141,8 @@ class GeneratorNet(torch.nn.Module):
             x = self.f2(self.out(x))
         else:
             x = self.f1(self.hidden0(x))
-            # x = self.bn1(x)
             x = self.f2(self.hidden1(x))
-            # x = self.bn2(x)
-            x = self.f2(self.hidden2(x))
-            x = self.f3(self.out(x))
+            x = self.f3(self.out(x)) * 2
 
         return x
 
@@ -169,7 +154,7 @@ def ones_target(size):
     eps = EPS
     if EPS == "dynamic":
         eps = (random.random() * 0.5) - 0.2
-    data = Variable(torch.ones(size, 2).to(device)) - eps
+    data = Variable(torch.ones(size, 2)) - eps
     return data
 
 
@@ -180,7 +165,7 @@ def zeros_target(size):
     eps = EPS
     if EPS == "dynamic":
         eps = (random.random() * 0.2)
-    data = Variable(torch.zeros(size, 2).to(device)) + eps
+    data = Variable(torch.zeros(size, 2)) + eps
     return data
 
 
@@ -230,29 +215,26 @@ def train_generator(optimizer):
         prediction = discriminator(fake_data)
 
         # Calculate error and backpropagate
-        target = ones_target(BATCH_SIZE) if not FLIP_GENERATOR else zeros_target(BATCH_SIZE)
-        factor = 1 if not FLIP_GENERATOR else -1
-        error1 = loss(prediction, target) * factor
+        target = ones_target(BATCH_SIZE)
+        error1 = loss(prediction, target)
 
-        error1.backward(retain_graph=True)
-
-        # Update weights with gradients
-        #optimizer.step()
+        if FLIP_GENERATOR:
+            error1.backward(retain_graph=True)
+        else:
+            error1.backward()
 
         #2step
         # Calculate error and backpropagate
-        FLIP_GENERATOR = not FLIP_GENERATOR
-        target = ones_target(BATCH_SIZE) if not FLIP_GENERATOR else zeros_target(BATCH_SIZE)
-        factor = 1 if not FLIP_GENERATOR else -1
-        error2 = loss(prediction, target) * factor
-        error2.backward()
+        if FLIP_GENERATOR:
+            target = zeros_target(BATCH_SIZE)
+            error2 = -loss(prediction, target)
+            error2.backward()
 
         # Update weights with gradients
         optimizer.step()
-        FLIP_GENERATOR = not FLIP_GENERATOR
 
     # Return error
-    return (error1 + error2)
+    return (error1 + error2) if FLIP_GENERATOR else error1
 
 
 def show_plot(data, batch_size, suffix):
@@ -318,14 +300,14 @@ def print_params():
                 "reg type: %s\n"
                 "g activation_1 %s\n"
                 "g activation_2 %s\n"
-                "g activation 3 %s\n"
+                "g activation 3 %s * 2\n"
                 "d activation_1 %s\n"
                 "d activation_2 %s\n"
                 "d lr %f\n"
                 "g lr %f\n"
                 "2step on G\n"
                 "Epsilon %s\n"
-                "raised neurons to 10 20\n"
+                "raised neurons to 5 10\n"
                 "dropout d on h1\n"
                 "added layer to d and g\n"
                 # "added bn on 2 layers"
@@ -345,18 +327,21 @@ if __name__ == '__main__':
         REG_TYPE = sys.argv[6]
 
     else:
-        DATA_TYPE = 'spiral'
+        DATA_TYPE = 'line'
         BATCH_SIZE = 1000
         EPOCHS = 100000
         G_REGULARIZATION_RATE = 0.35
         D_REGULARIZATION_RATE = 0.3
         REG_TYPE = 'none'
 
+    if DATA_TYPE != 'spiral':
+        FLIP_GENERATOR = False
+
     D_ACTIVATION_FUNC_1 = "sigmoid"
     D_ACTIVATION_FUNC_2 = "sigmoid"
     G_ACTIVATION_FUNC_1 = "celu"
     G_ACTIVATION_FUNC_2 = "tanh"
-    G_ACTIVATION_FUNC_3 = "tanh_shrink"
+    G_ACTIVATION_FUNC_3 = "tanh"
     G_LR = 0.0005
     D_LR = 0.003
     BATCH_SIZE_TARGET = 1000
@@ -370,8 +355,8 @@ if __name__ == '__main__':
     real_data = Variable(sample_data(BATCH_SIZE))
     show_plot(real_data, BATCH_SIZE, "target_data")
 
-    discriminator = DiscriminatorNet().to(device)
-    generator = GeneratorNet().to(device)
+    discriminator = DiscriminatorNet()
+    generator = GeneratorNet()
 
     if REG_TYPE == 'weight_decay':
         d_optimizer = optim.Adam(discriminator.parameters(), lr=D_LR, weight_decay=D_REGULARIZATION_RATE)
